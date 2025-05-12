@@ -1,0 +1,59 @@
+m<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Income Tax Report Wizard Action -->
+	<record id="action_l10n_il_income_tax_report_wizard" model="ir.actions.act_window">
+		<field name="name">דוחות מס הכנסה</field>
+		<field name="res_model">l10n_il.income.tax.report.wizard</field>
+		<field name="view_mode">form</field>
+		<field name="target">new</field>
+	</record>
+
+	<!-- Income Tax Tables Action -->
+	<record id="action_l10n_il_income_tax" model="ir.actions.act_window">
+		<field name="name">טבלאות מס הכנסה</field>
+		<field name="res_model">l10n_il.income.tax</field>
+		<field name="view_mode">tree,form</field>
+		<field name="help" type="html">
+			<p class="o_view_nocontent_smiling_face">
+				צור טבלת מס הכנסה חדשה
+			</p>
+			<p>
+				טבלאות מס הכנסה מגדירות מדרגות מס ושיעורי מס לתקופה מסוימת.
+			</p>
+		</field>
+	</record>
+
+	<!-- Create parent menu for Israeli Reports if not exists -->
+	<record id="menu_israeli_reports" model="ir.ui.menu">
+		<field name="name">דוחות ישראליים</field>
+		<field name="parent_id" ref="account.menu_finance_reports"/>
+		<field name="sequence">150</field>
+		<field name="groups_id" eval="[(4, ref('account.group_account_user'))]"/>
+	</record>
+
+	<!-- Create parent menu for Israeli Configuration if not exists -->
+	<record id="menu_israeli_config" model="ir.ui.menu">
+		<field name="name">הגדרות ישראליות</field>
+		<field name="parent_id" ref="account.menu_finance_configuration"/>
+		<field name="sequence">150</field>
+		<field name="groups_id" eval="[(4, ref('account.group_account_user'))]"/>
+	</record>
+
+	<!-- Income Tax Report Menu -->
+	<record id="menu_l10n_il_income_tax_report" model="ir.ui.menu">
+		<field name="name">דוחות מס הכנסה</field>
+		<field name="parent_id" ref="menu_israeli_reports"/>
+		<field name="action" ref="action_l10n_il_income_tax_report_wizard"/>
+		<field name="sequence">20</field>
+		<field name="groups_id" eval="[(4, ref('account.group_account_user'))]"/>
+	</record>
+
+	<!-- Income Tax Tables Menu -->
+	<record id="menu_l10n_il_income_tax" model="ir.ui.menu">
+		<field name="name">טבלאות מס הכנסה</field>
+		<field name="parent_id" ref="menu_israeli_config"/>
+		<field name="action" ref="action_l10n_il_income_tax"/>
+		<field name="sequence">20</field>
+		<field name="groups_id" eval="[(4, ref('account.group_account_user'))]"/>
+	</record>
+</odoo>

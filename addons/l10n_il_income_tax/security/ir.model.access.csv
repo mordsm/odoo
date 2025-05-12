@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_l10n_il_income_tax_user,l10n_il.income.tax.user,model_l10n_il_income_tax,account.group_account_user,1,0,0,0
+access_l10n_il_income_tax_manager,l10n_il.income.tax.manager,model_l10n_il_income_tax,account.group_account_manager,1,1,1,1
+access_l10n_il_corporate_tax_return_user,l10n_il.corporate.tax.return user,model_l10n_il_corporate_tax_return,account.group_account_user,1,0,0,0
+access_l10n_il_corporate_tax_return_manager,l10n_il.corporate.tax.return manager,model_l10n_il_corporate_tax_return,account.group_account_manager,1,1,1,1
+access_l10n_il_depreciation_schedule_user,l10n_il.depreciation.schedule user,model_l10n_il_depreciation_schedule,account.group_account_user,1,0,0,0
+access_l10n_il_depreciation_schedule_manager,l10n_il.depreciation.schedule manager,model_l10n_il_depreciation_schedule,account.group_account_manager,1,1,1,1
+access_l10n_il_depreciation_schedule_line_user,l10n_il.depreciation.schedule.line user,model_l10n_il_depreciation_schedule_line,account.group_account_user,1,0,0,0
+access_l10n_il_depreciation_schedule_line_manager,l10n_il.depreciation.schedule.line manager,model_l10n_il_depreciation_schedule_line,account.group_account_manager,1,1,1,1
+access_l10n_il_generate_tax_reports_wizard,l10n_il.generate.tax.reports.wizard,model_l10n_il_generate_tax_reports_wizard,account.group_account_manager,1,1,1,1.

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Corporate Tax Return Tree View -->
+	<record id="view_corporate_tax_return_tree" model="ir.ui.view">
+		<field name="name">l10n_il.corporate.tax.return.tree</field>
+		<field name="model">l10n_il.corporate.tax.return</field>
+		<field name="arch" type="xml">
+			<tree string="Corporate Tax Returns" decoration-info="state == 'draft'" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'">
+				<field name="name"/>
+				<field name="company_id" groups="base.group_multi_company"/>
+				<field name="fiscal_year"/>
+				<field name="submission_date"/>
+				<field name="total_income"/>
+				<field name="total_expenses"/>
+				<field name="net_profit_before_tax"/>
+				<field name="tax_amount"/>
+				<field name="state"/>
+			</tree>
+		</field>
+	</record>
+
+	<!-- Corporate Tax Return Form View -->
+	<record id="view_corporate_tax_return_form" model="ir.ui.view">
+		<field name="name">l10n_il.corporate.tax.return.form</field>
+		<field name="model">l10n_il.corporate.tax.return</field>
+		<field name="arch" type="xml">
+			<form string="Corporate Tax Return">
+				<header>
+					<button name="action_submit" string="Submit" type="object" class="oe_highlight" states="draft"/>
+					<button name="action_approve" string="Approve" type="object" class="oe_highlight" states="submitted"/>
+					<button name="action_reject" string="Reject" type="object" class="btn-danger" states="submitted"/>
+					<button name="action_reset_to_draft" string="Reset to Draft" type="object" states="submitted,rejected"/>
+					<field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,rejected"/>
+				</header>
+				<sheet>
+					<div class="oe_title">
+						<h1>
+							<field name="name" readonly="1"/>
+						</h1>
+					</div>
+					<group>
+						<group>
+							<field name="company_id" options="{'no_create': True}" groups="base.group_multi_company"/>
+							<field name="fiscal_year"/>
+							<field name="currency_id" invisible="1"/>
+						</group>
+						<group>
+							<field name="submission_date" readonly="1" attrs="{'invisible': [('submission_date', '=', False)]}"/>
+						</group>
+					</group>
+					<notebook>
+						<page string="Income">
+							<group>
+								<field name="income_from_sales"/>
+								<field name="income_from_services"/>
+								<field name="other_income"/>
+								<field name="total_income" class="oe_subtotal_footer_separator"/>
+							</group>
+						</page>
+						<page string="Expenses">
+							<group>
+								<field name="cost_of_goods_sold"/>
+								<field name="operational_expenses"/>
+								<field name="salary_expenses"/>
+								<field name="depreciation_expenses"/>
+								<field name="finance_expenses"/>
+								<field name="other_expenses"/>
+								<field name="total_expenses" class="oe_subtotal_footer_separator"/>
+							</group>
+						</page>
+						<page string="Tax Calculation">
+							<group>
+								<field name="net_profit_before_tax"/>
+								<field name="tax_amount" class="oe_subtotal_footer_separator"/>
+							</group>
+						</page>
+					</notebook>
+				</sheet>
+				<div class="oe_chatter">
+					<field name="message_follower_ids"/>
+					<field name="activity_ids"/>
+					<field name="message_ids"/>
+				</div>
+			</form>
+		</field>
+	</record>
+
+	<!-- Corporate Tax Return Search View -->
+	<record id="view_corporate_tax_return_search" model="ir.ui.view">
+		<field name="name">l10n_il.corporate.tax.return.search</field>
+		<field name="model">l10n_il.corporate.tax.return</field>
+		<field name="arch" type="xml">
+			<search string="Search Corporate Tax Return">
+				<field name="name"/>
+				<field name="fiscal_year"/>
+				<filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+				<filter string="Submitted" name="submitted" domain="[('state', '=', 'submitted')]"/>
+				<filter string="Approved" name="approved" domain="[('state', '=', 'approved')]"/>
+				<filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
+				<group expand="0" string="Group By">
+					<filter string="Status" name="status" context="{'group_by': 'state'}"/>
+					<filter string="Fiscal Year" name="fiscal_year" context="{'group_by': 'fiscal_year'}"/>
+				</group>
+			</search>
+		</field>
+	</record>
+
+	<!-- Corporate Tax Return Action -->
+	<record id="action_corporate_tax_return" model="ir.actions.act_window">
+		<field name="name">Corporate Tax Returns</field>
+		<field name="res_model">l10n_il.corporate.tax.return</field>
+		<field name="view_mode">tree,form</field>
+		<field name="search_view_id" ref="view_corporate_tax_return_search"/>
+		<field name="help" type="html">
+			<p class="o_view_nocontent_smiling_face">
+				Create your first Corporate Tax Return
+			</p>
+		</field>
+	</record>
+</odoo>

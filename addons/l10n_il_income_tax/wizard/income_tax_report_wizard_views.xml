@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Income Tax Report Wizard Form View -->
+	<record id="view_l10n_il_income_tax_report_wizard_form" model="ir.ui.view">
+		<field name="name">l10n_il.income.tax.report.wizard.form</field>
+		<field name="model">l10n_il.income.tax.report.wizard</field>
+		<field name="arch" type="xml">
+			<form string="דוחות מס הכנסה">
+				<sheet>
+					<group>
+						<group>
+							<field name="date_from"/>
+							<field name="date_to"/>
+							<field name="company_id" groups="base.group_multi_company"/>
+						</group>
+						<group>
+							<field name="report_type" widget="radio"/>
+							<field name="include_social_security"/>
+							<field name="include_health_insurance"/>
+						</group>
+					</group>
+					<notebook>
+						<page string="עובדים" name="employees">
+							<group>
+								<field name="department_id"/>
+							</group>
+							<field name="employee_ids" nolabel="1">
+								<tree>
+									<field name="name"/>
+									<field name="department_id"/>
+									<field name="job_title"/>
+								</tree>
+							</field>
+							<p class="text-muted" attrs="{'invisible': [('employee_ids', '!=', [])]}">
+								אם לא נבחרו עובדים, הדוח יכלול את כל העובדים.
+								ניתן לסנן לפי מחלקה לעיל.
+							</p>
+						</page>
+					</notebook>
+					<field name="report_data" invisible="1"/>
+				</sheet>
+				<footer>
+					<button name="action_generate_report" string="הפק דוח" type="object" class="btn-primary"/>
+					<button string="ביטול" class="btn-secondary" special="cancel"/>
+				</footer>
+			</form>
+		</field>
+	</record>
+
+	<!-- Income Tax Report Wizard Action -->
+	<record id="action_l10n_il_income_tax_report_wizard" model="ir.actions.act_window">
+		<field name="name">דוחות מס הכנסה</field>
+		<field name="res_model">l10n_il.income.tax.report.wizard</field>
+		<field name="view_mode">form</field>
+		<field name="target">new</field>
+	</record>
+
+	<!-- Multiple options for menu placement to ensure it appears -->
+	<!-- Option 1: Add to standard Israeli Reports menu using common external ID -->
+	<menuitem id="menu_l10n_il_income_tax_report"
+              name="דוחות מס הכנסה"
+              action="action_l10n_il_income_tax_report_wizard"
+              parent="account.il_reports"
+              sequence="20"/>
+
+	<!-- Option 2: If menu doesn't appear, try using another common ID -->
+	<menuitem id="menu_l10n_il_income_tax_report_alt"
+              name="דוחות מס הכנסה"
+              action="action_l10n_il_income_tax_report_wizard"
+              parent="account.menu_finance_israeli_reports"
+              sequence="20"/>
+
+	<!-- Option 3: Last resort - add to accounting reports directly -->
+	<menuitem id="menu_l10n_il_income_tax_report_fallback"
+              name="דוחות מס הכנסה"
+              action="action_l10n_il_income_tax_report_wizard"
+              parent="account.menu_finance_reports"
+              groups="account.group_account_readonly,account.group_account_user"
+              sequence="150"/>
+</odoo>

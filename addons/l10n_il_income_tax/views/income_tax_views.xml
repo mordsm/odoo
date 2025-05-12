@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Income Tax Tree View -->
+	<record id="view_l10n_il_income_tax_tree" model="ir.ui.view">
+		<field name="name">l10n_il.income.tax.tree</field>
+		<field name="model">l10n_il.income.tax</field>
+		<field name="arch" type="xml">
+			<tree string="טבלאות מס הכנסה">
+				<field name="name"/>
+				<field name="date_from"/>
+				<field name="date_to"/>
+				<field name="credit_point_value"/>
+				<field name="active" widget="boolean_toggle"/>
+			</tree>
+		</field>
+	</record>
+
+	<!-- Income Tax Form View -->
+	<record id="view_l10n_il_income_tax_form" model="ir.ui.view">
+		<field name="name">l10n_il.income.tax.form</field>
+		<field name="model">l10n_il.income.tax</field>
+		<field name="arch" type="xml">
+			<form string="טבלת מס הכנסה">
+				<sheet>
+					<div class="oe_button_box" name="button_box">
+						<button name="toggle_active" type="object" class="oe_stat_button" icon="fa-archive">
+							<field name="active" widget="boolean_button" options="{'terminology': 'archive'}"/>
+						</button>
+					</div>
+					<div class="oe_title">
+						<h1>
+							<field name="name" placeholder="לדוגמה: מס הכנסה 2025"/>
+						</h1>
+					</div>
+					<group>
+						<group>
+							<field name="date_from"/>
+							<field name="date_to"/>
+							<field name="credit_point_value"/>
+						</group>
+						<group>
+							<field name="social_security_threshold"/>
+							<field name="social_security_rate_under"/>
+							<field name="social_security_rate_over"/>
+							<field name="health_insurance_rate_under"/>
+							<field name="health_insurance_rate_over"/>
+						</group>
+					</group>
+					<notebook>
+						<page string="מדרגות מס">
+							<field name="tax_bracket_ids">
+								<tree editable="bottom">
+									<field name="lower_limit"/>
+									<field name="upper_limit"/>
+									<field name="rate"/>
+									<field name="name" optional="hide"/>
+								</tree>
+							</field>
+						</page>
+					</notebook>
+				</sheet>
+			</form>
+		</field>
+	</record>
+
+	<!-- Income Tax Bracket Form View -->
+	<record id="view_l10n_il_income_tax_bracket_form" model="ir.ui.view">
+		<field name="name">l10n_il.income.tax.bracket.form</field>
+		<field name="model">l10n_il.income.tax.bracket</field>
+		<field name="arch" type="xml">
+			<form string="מדרגת מס הכנסה">
+				<sheet>
+					<group>
+						<group>
+							<field name="income_tax_id"/>
+							<field name="lower_limit"/>
+							<field name="upper_limit"/>
+							<field name="rate"/>
+						</group>
+					</group>
+				</sheet>
+			</form>
+		</field>
+	</record>
+
+	<!-- Income Tax Search View -->
+	<record id="view_l10n_il_income_tax_search" model="ir.ui.view">
+		<field name="name">l10n_il.income.tax.search</field>
+		<field name="model">l10n_il.income.tax</field>
+		<field name="arch" type="xml">
+			<search>
+				<field name="name"/>
+				<field name="date_from"/>
+				<field name="date_to"/>
+				<filter string="פעיל" name="active" domain="[('active', '=', True)]"/>
+				<filter string="ארכיון" name="inactive" domain="[('active', '=', False)]"/>
+				<group expand="0" string="קבץ לפי">
+					<filter string="שנה" name="year" context="{'group_by': 'date_from:year'}"/>
+				</group>
+			</search>
+		</field>
+	</record>
+
+	<!-- Income Tax Action -->
+	<record id="action_l10n_il_income_tax" model="ir.actions.act_window">
+		<field name="name">טבלאות מס הכנסה</field>
+		<field name="res_model">l10n_il.income.tax</field>
+		<field name="view_mode">tree,form</field>
+		<field name="search_view_id" ref="view_l10n_il_income_tax_search"/>
+		<field name="help" type="html">
+			<p class="o_view_nocontent_smiling_face">
+				צור טבלת מס הכנסה חדשה
+			</p>
+			<p>
+				טבלאות מס הכנסה מגדירות מדרגות מס ושיעורי מס לתקופה מסוימת.
+			</p>
+		</field>
+	</record>
+
+	<!-- Multiple options for menu placement to ensure it appears -->
+	<!-- Option 1: Add to standard Israeli Configuration menu using common external ID -->
+	<menuitem id="menu_l10n_il_income_tax"
+              name="טבלאות מס הכנסה"
+              parent="account.il_config"
+              action="action_l10n_il_income_tax"
+              sequence="20"/>
+
+	<!-- Option 2: If menu doesn't appear, try using another common ID -->
+	<menuitem id="menu_l10n_il_income_tax_alt"
+              name="טבלאות מס הכנסה"
+              parent="account.menu_finance_israeli_config"
+              action="action_l10n_il_income_tax"
+              sequence="20"/>
+
+	<!-- Option 3: Last resort - add to accounting configuration directly -->
+	<menuitem id="menu_l10n_il_income_tax_fallback"
+              name="טבלאות מס הכנסה"
+              parent="account.menu_finance_configuration"
+              action="action_l10n_il_income_tax"
+              groups="account.group_account_readonly,account.group_account_user"
+              sequence="150"/>
+</odoo>

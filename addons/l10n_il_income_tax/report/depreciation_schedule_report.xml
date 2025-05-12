@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Depreciation Schedule Tree View -->
+	<record id="view_depreciation_schedule_tree" model="ir.ui.view">
+		<field name="name">l10n_il.depreciation.schedule.tree</field>
+		<field name="model">l10n_il.depreciation.schedule</field>
+		<field name="arch" type="xml">
+			<tree string="Depreciation Schedules">
+				<field name="name"/>
+				<field name="company_id" groups="base.group_multi_company"/>
+				<field name="fiscal_year"/>
+				<field name="date_from"/>
+				<field name="date_to"/>
+				<field name="total_depreciation"/>
+			</tree>
+		</field>
+	</record>
+
+	<!-- Depreciation Schedule Form View -->
+	<record id="view_depreciation_schedule_form" model="ir.ui.view">
+		<field name="name">l10n_il.depreciation.schedule.form</field>
+		<field name="model">l10n_il.depreciation.schedule</field>
+		<field name="arch" type="xml">
+			<form string="Depreciation Schedule">
+				<sheet>
+					<div class="oe_title">
+						<h1>
+							<field name="name" readonly="1"/>
+						</h1>
+					</div>
+					<group>
+						<group>
+							<field name="company_id" options="{'no_create': True}" groups="base.group_multi_company"/>
+							<field name="fiscal_year"/>
+							<field name="currency_id" invisible="1"/>
+						</group>
+						<group>
+							<field name="date_from"/>
+							<field name="date_to"/>
+						</group>
+					</group>
+					<notebook>
+						<page string="Depreciation Lines">
+							<field name="depreciation_line_ids">
+								<tree editable="bottom">
+									<field name="asset_id"/>
+									<field name="asset_category"/>
+									<field name="acquisition_date"/>
+									<field name="acquisition_value"/>
+									<field name="depreciation_rate"/>
+									<field name="depreciation_amount"/>
+									<field name="accumulated_depreciation"/>
+									<field name="net_book_value"/>
+								</tree>
+							</field>
+							<group class="oe_subtotal_footer">
+								<field name="total_depreciation" class="oe_subtotal_footer_separator"/>
+							</group>
+						</page>
+					</notebook>
+				</sheet>
+			</form>
+		</field>
+	</record>
+
+	<!-- Depreciation Schedule Search View -->
+	<record id="view_depreciation_schedule_search" model="ir.ui.view">
+		<field name="name">l10n_il.depreciation.schedule.search</field>
+		<field name="model">l10n_il.depreciation.schedule</field>
+		<field name="arch" type="xml">
+			<search string="Search Depreciation Schedule">
+				<field name="name"/>
+				<field name="fiscal_year"/>
+				<group expand="0" string="Group By">
+					<filter string="Fiscal Year" name="fiscal_year" context="{'group_by': 'fiscal_year'}"/>
+				</group>
+			</search>
+		</field>
+	</record>
+
+	<!-- Depreciation Schedule Action -->
+	<record id="action_depreciation_schedule" model="ir.actions.act_window">
+		<field name="name">Depreciation Schedules</field>
+		<field name="res_model">l10n_il.depreciation.schedule</field>
+		<field name="view_mode">tree,form</field>
+		<field name="search_view_id" ref="view_depreciation_schedule_search"/>
+		<field name="help" type="html">
+			<p class="o_view_nocontent_smiling_face">
+				Create your first Depreciation Schedule
+			</p>
+		</field>
+	</record>
+</odoo>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Israeli Income Tax Menu -->
+	<menuitem id="menu_l10n_il_income_tax"
+              name="Income Tax"
+              parent="account.menu_finance_reports"
+              sequence="10"/>
+
+	<!-- Corporate Tax Return Menu -->
+	<menuitem id="menu_corporate_tax_return"
+              name="Corporate Tax Returns"
+              parent="menu_l10n_il_income_tax"
+              action="action_corporate_tax_return"
+              sequence="10"/>
+
+	<!-- Depreciation Schedule Menu -->
+	<menuitem id="menu_depreciation_schedule"
+              name="Depreciation Schedules"
+              parent="menu_l10n_il_income_tax"
+              action="action_depreciation_schedule"
+              sequence="20"/>
+
+	<!-- Tax Reports Wizard Menu -->
+	<menuitem id="menu_generate_tax_reports"
+              name="Generate Tax Reports"
+              parent="menu_l10n_il_income_tax"
+              action="action_generate_tax_reports_wizard"
+              sequence="30"/>
+</odoo>

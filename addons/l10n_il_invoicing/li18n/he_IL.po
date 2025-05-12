@@ -1,0 +1,309 @@
+﻿# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_il_invoicing
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-05-11 12:00+0000\n"
+"PO-Revision-Date: 2025-05-11 12:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+"Language: he_IL\n"
+"X-Generator: Odoo\n"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__name
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Israeli VAT Report"
+msgstr "דוח מע\"מ תקופתי"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_tree
+msgid "Israeli VAT Reports"
+msgstr "דוחות מע\"מ תקופתיים"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Calculate"
+msgstr "חישוב"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Generate Report File"
+msgstr "הפקת קובץ דיווח"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Reset to Draft"
+msgstr "החזר לטיוטה"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__state
+msgid "State"
+msgstr "סטטוס"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report__state__draft
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "Draft"
+msgstr "טיוטה"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report__state__calculated
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "Calculated"
+msgstr "חושב"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report__state__done
+msgid "Done"
+msgstr "הוגש"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "Submitted"
+msgstr "הוגש"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__company_id
+msgid "Company"
+msgstr "חברה"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__date_from
+msgid "Start Date"
+msgstr "תאריך התחלה"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__date_to
+msgid "End Date"
+msgstr "תאריך סיום"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__currency_id
+msgid "Currency"
+msgstr "מטבע"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Summary"
+msgstr "סיכום"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Details"
+msgstr "פרטים"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Output VAT (Sales)"
+msgstr "מס עסקאות (מכירות)"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__output_vat_base
+msgid "Output VAT Base"
+msgstr "בסיס מס עסקאות"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__output_vat_tax
+msgid "Output VAT Tax"
+msgstr "מס עסקאות"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Input VAT (Purchases)"
+msgstr "מס תשומות (רכישות)"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__input_vat_base
+msgid "Input VAT Base"
+msgstr "בסיס מס תשומות"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__input_vat_tax
+msgid "Input VAT Tax"
+msgstr "מס תשומות"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Other Transactions"
+msgstr "עסקאות אחרות"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__export_vat_base
+msgid "Export Base (Zero-rated)"
+msgstr "יצוא (בשיעור אפס)"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__import_vat_base
+msgid "Import Base"
+msgstr "בסיס יבוא"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__import_vat_tax
+msgid "Import VAT Tax"
+msgstr "מס יבוא"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__exempt_vat_base
+msgid "Exempt Transactions"
+msgstr "עסקאות פטורות"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Result"
+msgstr "תוצאה"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__vat_payable
+msgid "VAT Payable"
+msgstr "מע\"מ לתשלום"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__date
+msgid "Date"
+msgstr "תאריך"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__partner_id
+msgid "Partner"
+msgstr "שותף"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__move_id
+msgid "Invoice"
+msgstr "חשבונית"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__move_type
+msgid "Type"
+msgstr "סוג"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__amount_untaxed
+msgid "Base Amount"
+msgstr "סכום בסיס"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__amount_tax
+msgid "Tax Amount"
+msgstr "סכום מס"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report_line__amount_total
+msgid "Total Amount"
+msgstr "סכום כולל"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Generated Report File:"
+msgstr "קובץ דוח שהופק:"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__report_file
+msgid "Report File"
+msgstr "קובץ דוח"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields,field_description:l10n_il_invoicing.field_l10n_il_vat_report__report_filename
+msgid "Report Filename"
+msgstr "שם קובץ דוח"
+
+#. module: l10n_il_invoicing
+#: model:ir.actions.act_window,name:l10n_il_invoicing.action_l10n_il_vat_report
+#: model:ir.ui.menu,name:l10n_il_invoicing.menu_l10n_il_vat_report
+msgid "VAT Reports"
+msgstr "דוחות מע\"מ"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "Search VAT Reports"
+msgstr "חיפוש דוחות מע\"מ"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "This Year"
+msgstr "השנה הנוכחית"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "Group By"
+msgstr "קבץ לפי"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_search
+msgid "Status"
+msgstr "סטטוס"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_tree
+msgid "Total Output VAT"
+msgstr "סה\"כ מס עסקאות"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_tree
+msgid "Total Input VAT"
+msgstr "סה\"כ מס תשומות"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_tree
+msgid "Total VAT Payable"
+msgstr "סה\"כ מע\"מ לתשלום"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Create your first VAT report"
+msgstr "צור את דוח המע\"מ הראשון שלך"
+
+#. module: l10n_il_invoicing
+#: model_terms:ir.ui.view,arch_db:l10n_il_invoicing.view_l10n_il_vat_report_form
+msgid "Generate and submit your VAT reports to the Israeli Tax Authority."
+msgstr "הפק והגש את דוחות המע\"מ שלך לרשות המסים בישראל."
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report_line__move_type__out_invoice
+msgid "Customer Invoice"
+msgstr "חשבונית לקוח"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report_line__move_type__out_refund
+msgid "Customer Credit Note"
+msgstr "זיכוי לקוח"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report_line__move_type__in_invoice
+msgid "Vendor Bill"
+msgstr "חשבונית ספק"
+
+#. module: l10n_il_invoicing
+#: model:ir.model.fields.selection,name:l10n_il_invoicing.selection__l10n_il_vat_report_line__move_type__in_refund
+msgid "Vendor Credit Note" 
+msgstr "זיכוי ספק"
+
+#. module: l10n_il_invoicing
+#: model:ir.model,name:l10n_il_invoicing.model_l10n_il_vat_report
+msgid "Israeli VAT Report"
+msgstr "דוח מע\"מ ישראלי"
+
+#. module: l10n_il_invoicing
+#: model:ir.model,name:l10n_il_invoicing.model_l10n_il_vat_report_line
+msgid "Israeli VAT Report Line"
+msgstr "שורת דוח מע\"מ ישראלי"
+
+#. module: l10n_il_invoicing
+#: code:addons/l10n_il_invoicing/models/l10n_il_vat_report.py:0
+#, python-format
+msgid "Success"
+msgstr "הצלחה"
+
+#. module: l10n_il_invoicing
+#: code:addons/l10n_il_invoicing/models/l10n_il_vat_report.py:0
+#, python-format
+msgid "VAT report file has been generated successfully."
+msgstr "קובץ דוח מע\"מ נוצר בהצלחה."

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Create top-level menu for Israeli Reports in Invoicing -->
+	<menuitem id="menu_l10n_il_reports"
+        name="Israeli Reports"
+        parent="account.menu_finance_reports"
+        sequence="100"/>
+
+	<!-- VAT Report menu item -->
+	<menuitem id="menu_l10n_il_vat_report"
+        name="VAT Reports"
+        action="action_l10n_il_vat_report"
+        parent="menu_l10n_il_reports"
+        sequence="10"/>
+</odoo>

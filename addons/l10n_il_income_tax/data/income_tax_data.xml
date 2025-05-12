@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<data noupdate="1">
+		<!-- Income Tax Configuration for 2025 -->
+		<record id="income_tax_2025" model="l10n_il.income.tax">
+			<field name="name">Income Tax 2025</field>
+			<field name="date_from">2025-01-01</field>
+			<field name="date_to">2025-12-31</field>
+			<field name="credit_point_value">223.0</field>
+			<field name="social_security_threshold">7122.0</field>
+			<field name="social_security_rate_under">3.95</field>
+			<field name="social_security_rate_over">12.00</field>
+			<field name="health_insurance_rate_under">3.10</field>
+			<field name="health_insurance_rate_over">5.00</field>
+		</record>
+
+		<!-- Tax Brackets for 2025 -->
+		<record id="income_tax_bracket_2025_1" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">0</field>
+			<field name="upper_limit">6790</field>
+			<field name="rate">10</field>
+		</record>
+
+		<record id="income_tax_bracket_2025_2" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">6790</field>
+			<field name="upper_limit">9730</field>
+			<field name="rate">14</field>
+		</record>
+
+		<record id="income_tax_bracket_2025_3" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">9730</field>
+			<field name="upper_limit">15620</field>
+			<field name="rate">20</field>
+		</record>
+
+		<record id="income_tax_bracket_2025_4" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">15620</field>
+			<field name="upper_limit">21710</field>
+			<field name="rate">31</field>
+		</record>
+
+		<record id="income_tax_bracket_2025_5" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">21710</field>
+			<field name="upper_limit">45180</field>
+			<field name="rate">35</field>
+		</record>
+
+		<record id="income_tax_bracket_2025_6" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">45180</field>
+			<field name="upper_limit">58190</field>
+			<field name="rate">47</field>
+		</record>
+
+		<record id="income_tax_bracket_2025_7" model="l10n_il.income.tax.bracket">
+			<field name="income_tax_id" ref="income_tax_2025"/>
+			<field name="lower_limit">58190</field>
+			<field name="rate">50</field>
+		</record>
+
+		<!-- Tax Offices -->
+		<record id="tax_office_jerusalem" model="l10n_il.tax.office">
+			<field name="name">Jerusalem</field>
+			<field name="code">01</field>
+			<field name="city">Jerusalem</field>
+		</record>
+
+		<record id="tax_office_tel_aviv" model="l10n_il.tax.office">
+			<field name="name">Tel Aviv</field>
+			<field name="code">03</field>
+			<field name="city">Tel Aviv</field>
+		</record>
+
+		<record id="tax_office_haifa" model="l10n_il.tax.office">
+			<field name="name">Haifa</field>
+			<field name="code">04</field>
+			<field name="city">Haifa</field>
+		</record>
+
+		<record id="tax_office_netanya" model="l10n_il.tax.office">
+			<field name="name">Netanya</field>
+			<field name="code">19</field>
+			<field name="city">Netanya</field>
+		</record>
+
+		<record id="tax_office_beer_sheva" model="l10n_il.tax.office">
+			<field name="name">Beer Sheva</field>
+			<field name="code">20</field>
+			<field name="city">Beer Sheva</field>
+		</record>
+	</data>
+</odoo>

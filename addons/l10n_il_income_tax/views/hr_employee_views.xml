@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<!-- Extend HR Employee Form View -->
+	<record id="l10n_il_view_employee_form" model="ir.ui.view">
+		<field name="name">l10n_il.hr.employee.form</field>
+		<field name="model">hr.employee</field>
+		<field name="inherit_id" ref="hr.view_employee_form"/>
+		<field name="arch" type="xml">
+			<xpath expr="//page[@name='personal_information']" position="inside">
+				<group string="Israeli Tax Information" name="l10n_il_tax_info">
+					<field name="l10n_il_income_tax_credit_points"/>
+				</group>
+			</xpath>
+		</field>
+	</record>
+</odoo>

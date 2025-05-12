@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<data>
+		<!-- Corporate Tax Return Report Template -->
+		<template id="report_corporate_tax_return_document">
+			<t t-call="web.external_layout">
+				<t t-set="doc" t-value="doc.with_context(lang=lang)"/>
+				<div class="page">
+					<h2>Corporate Tax Return</h2>
+					<div class="row mt32 mb32">
+						<div class="col-3">
+							<strong>Reference:</strong>
+							<p t-field="doc.name"/>
+						</div>
+						<div class="col-3">
+							<strong>Company:</strong>
+							<p t-field="doc.company_id"/>
+						</div>
+						<div class="col-3">
+							<strong>Fiscal Year:</strong>
+							<p t-field="doc.fiscal_year"/>
+						</div>
+						<div class="col-3">
+							<strong>Status:</strong>
+							<p t-field="doc.state"/>
+						</div>
+					</div>
+
+					<h4>Income</h4>
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>Income Type</th>
+								<th class="text-right">Amount</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>Income from Sales</td>
+								<td class="text-right">
+									<span t-field="doc.income_from_sales" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Income from Services</td>
+								<td class="text-right">
+									<span t-field="doc.income_from_services" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Other Income</td>
+								<td class="text-right">
+									<span t-field="doc.other_income" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr class="border-top">
+								<td>
+									<strong>Total Income</strong>
+								</td>
+								<td class="text-right">
+									<strong>
+										<span t-field="doc.total_income" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+									</strong>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+
+					<h4>Expenses</h4>
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>Expense Type</th>
+								<th class="text-right">Amount</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>Cost of Goods Sold</td>
+								<td class="text-right">
+									<span t-field="doc.cost_of_goods_sold" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Operational Expenses</td>
+								<td class="text-right">
+									<span t-field="doc.operational_expenses" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Salary Expenses</td>
+								<td class="text-right">
+									<span t-field="doc.salary_expenses" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Depreciation Expenses</td>
+								<td class="text-right">
+									<span t-field="doc.depreciation_expenses" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Finance Expenses</td>
+								<td class="text-right">
+									<span t-field="doc.finance_expenses" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr>
+								<td>Other Expenses</td>
+								<td class="text-right">
+									<span t-field="doc.other_expenses" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+								</td>
+							</tr>
+							<tr class="border-top">
+								<td>
+									<strong>Total Expenses</strong>
+								</td>
+								<td class="text-right">
+									<strong>
+										<span t-field="doc.total_expenses" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+									</strong>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+
+					<h4>Tax Calculation</h4>
+					<table class="table table-sm">
+						<tbody>
+							<tr>
+								<td>
+									<strong>Net Profit Before Tax</strong>
+								</td>
+								<td class="text-right">
+									<strong>
+										<span t-field="doc.net_profit_before_tax" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<strong>Tax Amount (23%)</strong>
+								</td>
+								<td class="text-right">
+									<strong>
+										<span t-field="doc.tax_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+									</strong>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+
+					<div class="row mt32 mb32" t-if="doc.state == 'submitted' or doc.state == 'approved'">
+						<div class="col-12">
+							<strong>Submission Date:</strong>
+							<p t-field="doc.submission_date"/>
+						</div>
+					</div>
+
+					<div class="clearfix mt32 mb32">
+						<div class="float-left">
+							<strong>Company Representative</strong>
+							<div class="mt32 mb32">
+								____________________
+							</div>
+						</div>
+						<div class="float-right">
+							<strong>Tax Authority Representative</strong>
+							<div class="mt32 mb32">
+								____________________
+							</div>
+						</div>
+					</div>
+				</div>
+			</t>
+		</template>
+
+		<template id="report_corporate_tax_return">
+			<t t-call="web.html_container">
+				<t t-foreach="docs" t-as="doc">
+					<t t-call="l10n_il_income_tax.report_corporate_tax_return_document"/>
+				</t>
+			</t>
+		</template>
+
+		<!-- Corporate Tax Return Report -->
+		<record id="action_report_corporate_tax_return" model="ir.actions.report">
+			<field name="name">Corporate Tax Return</field>
+			<field name="model">l10n_il.corporate.tax.return</field>
+			<field name="report_type">qweb-pdf</field>
+			<field name="report_name">l10n_il_income_tax.report_corporate_tax_return</field>
+			<field name="report_file">l10n_il_income_tax.report_corporate_tax_return</field>
+			<field name="binding_model_id" ref="model_l10n_il_corporate_tax_return"/>
+			<field name="binding_type">report</field>
+		</record>
+	</data>
+</odoo>
