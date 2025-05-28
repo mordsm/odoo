@@ -1,0 +1,1 @@
+type,record_id,payer_id,payment_id,employee_seq,unknown1,sum_total_agorot,name,date_from,date_to,payment_code,payment_type,currency,sum_payment,sum_tax,sum_exempt,sum_extra,sum_deducted,date_exec

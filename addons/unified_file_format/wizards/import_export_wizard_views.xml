@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Import/Export Wizard Form -->
+    <record id="view_import_export_wizard_form" model="ir.ui.view">
+        <field name="name">unified.file.format.wizard.form</field>
+        <field name="model">unified.file.format.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="operation_type" widget="radio"/>
+                        <field name="model_name" placeholder="e.g., res.partner, product.product"/>
+                    </group>
+                    
+                    <group string="Import Settings" attrs="{'invisible': [('operation_type', '!=', 'import')]}">
+                        <field name="import_file" filename="import_filename"/>
+                        <field name="import_filename" invisible="1"/>
+                        <field name="field_mapping_id" 
+                               domain="[('model_name', '=', model_name)]"
+                               context="{'default_model_name': model_name}"/>
+                    </group>
+                    
+                    <group string="Export Settings" attrs="{'invisible': [('operation_type', '!=', 'export')]}">
+                        <field name="export_format"/>
+                        <field name="domain_filter" placeholder="e.g., [('active','=',True)]"/>
+                        <field name="field_list" placeholder="e.g., name,email,phone"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_import" 
+                            string="Import Now" 
+                            type="object" 
+                            class="btn-primary"
+                            attrs="{'invisible': [('operation_type', '!=', 'import')]}"/>
+                    <button name="action_export" 
+                            string="Export Now" 
+                            type="object" 
+                            class="btn-primary"
+                            attrs="{'invisible': [('operation_type', '!=', 'export')]}"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_import_export_wizard" model="ir.actions.act_window">
+        <field name="name">Import/Export Wizard</field>
+        <field name="res_model">unified.file.format.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

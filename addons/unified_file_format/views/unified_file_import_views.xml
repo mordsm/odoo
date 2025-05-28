@@ -1,0 +1,173 @@
+<!-- views/unified_file_import_views.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_unified_file_import_tree" model="ir.ui.view">
+        <field name="name">unified.file.import.tree</field>
+        <field name="model">unified.file.import</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="company_name"/>
+                <field name="company_vat"/>
+                <field name="state"/>
+                <field name="create_date"/>
+                <field name="created_company_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_unified_file_import_form" model="ir.ui.view">
+        <field name="name">unified.file.import.form</field>
+        <field name="model">unified.file.import</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_analyze_file" type="object" 
+                            string="Analyze File" class="btn-primary"
+                            attrs="{'invisible': [('state', 'not in', ['draft'])]}"/>
+                    <button name="action_import_data" type="object" 
+                            string="Import Data" class="btn-primary"
+                            attrs="{'invisible': [('state', '!=', 'ready')]}"/>
+                    <field name="state" widget="statusbar" 
+                           statusbar_visible="draft,analyzing,ready,importing,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" 
+                                name="action_view_created_company" icon="fa-building"
+                                attrs="{'invisible': [('created_company_id', '=', False)]}">
+                            <field string="Company" name="created_company_id" widget="statinfo"/>
+                        </button>
+                    </div>
+                    
+                    <group>
+                        <group name="basic_info">
+                            <field name="name"/>
+                            <field name="file_name" invisible="1"/>
+                            <field name="file_data" filename="file_name"/>
+                        </group>
+                        <group name="extracted_info" attrs="{'invisible': [('state', '=', 'draft')]}">
+                            <field name="company_name"/>
+                            <field name="company_vat"/>
+                            <field name="company_address"/>
+                        </group>
+                    </group>
+
+                    <notebook attrs="{'invisible': [('state', '=', 'draft')]}">
+                        <page string="Import Statistics">
+                            <group>
+                                <group>
+                                    <field name="accounts_count"/>
+                                    <field name="partners_count"/>
+                                </group>
+                                <group>
+                                    <field name="products_count"/>
+                                    <field name="entries_count"/>
+                                </group>
+                            </group>
+                        </page>
+                        
+                        <page string="Import Options" attrs="{'invisible': [('state', 'not in', ['ready'])]}">
+                            <group>
+                                <group name="company_options">
+                                    <field name="create_new_company"/>
+                                </group>
+                                <group name="data_options">
+                                    <field name="import_accounts"/>
+                                    <field name="import_partners"/>
+                                    <field name="import_products"/>
+                                    <field name="import_entries"/>
+                                    <field name="import_opening_balances"/>
+                                </group>
+                            </group>
+                        </page>
+                        
+                        <page string="Logs" attrs="{'invisible': [('state', 'in', ['draft', 'ready'])]}">
+                            <group>
+                                <field name="error_log" attrs="{'invisible': [('error_log', '=', False)]}"/>
+                                <field name="warning_log" attrs="{'invisible': [('warning_log', '=', False)]}"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_unified_file_import" model="ir.actions.act_window">
+        <field name="name">Unified File Import</field>
+        <field name="res_model">unified.file.import</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Import data from Israel Tax Authority unified file
+            </p>
+            <p>
+                Upload a unified file from the Tax Authority to automatically
+                create a new company with all accounting data in Odoo.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_unified_file_import_root" 
+              name="Unified File Import" 
+              sequence="100"/>
+    
+    <menuitem id="menu_unified_file_import" 
+              name="Import Files" 
+              parent="menu_unified_file_import_root"
+              action="action_unified_file_import" 
+              sequence="10"/>
+</odoo>
+
+<!-- wizards/unified_file_import_wizard_views.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Model -->
+    <record id="view_unified_file_import_wizard" model="ir.ui.view">
+        <field name="name">unified.file.import.wizard.form</field>
+        <field name="model">unified.file.import.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="name"/>
+                    <field name="file_data" filename="file_name"/>
+                    <field name="file_name" invisible="1"/>
+                </group>
+                <group string="Import Options">
+                    <field name="create_new_company"/>
+                    <field name="import_accounts"/>
+                    <field name="import_partners"/>
+                    <field name="import_products"/>
+                    <field name="import_entries"/>
+                    <field name="import_opening_balances"/>
+                </group>
+                <footer>
+                    <button name="action_import" type="object" 
+                            string="Import" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_unified_file_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import Unified File</field>
+        <field name="res_model">unified.file.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Quick Import Menu -->
+    <menuitem id="menu_unified_file_import_wizard" 
+              name="Quick Import" 
+              parent="menu_unified_file_import_root"
+              action="action_unified_file_import_wizard" 
+              sequence="5"/>
+</odoo>
+

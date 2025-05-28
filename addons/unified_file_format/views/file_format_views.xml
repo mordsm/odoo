@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List View -->
+    <record id="view_unified_file_format_list" model="ir.ui.view">
+        <field name="name">unified.file.format.list</field>
+        <field name="model">unified.file.format</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state=='done'" decoration-danger="state=='error'">
+                <field name="name"/>
+                <field name="operation_type"/>
+                <field name="model_name"/>
+                <field name="records_processed"/>
+                <field name="records_created"/>
+                <field name="error_count"/>
+                <field name="state"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_unified_file_format_form" model="ir.ui.view">
+        <field name="name">unified.file.format.form</field>
+        <field name="model">unified.file.format</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <!-- ACTION BUTTONS - Updated for Odoo 18.0 -->
+                    <button name="perform_unified_import" string="📁 Import File" 
+                        type="object" class="btn-primary"
+                        invisible="operation_type != 'import'"/>
+                    <button name="action_analyze_structure" 
+                        string="🔍 Analyze File Structure" 
+                        type="object" 
+                        class="btn-warning"
+                        invisible="file_data == False"/>
+                    <button name="action_analyze_target_model" 
+                        string="🎯 Analyze Target Model" 
+                        type="object" 
+                        class="btn-info"
+                        invisible="model_name == False"/>
+                    <button name="action_debug_individual_transactions" 
+                        string="🔍 Debug Individual Transactions" 
+                        type="object" 
+                        class="btn-info"
+                        invisible="file_data == False"/>
+                    <button name="action_precise_analysis" 
+                        string="🔬 Precise Analysis" 
+                        type="object" 
+                        class="btn-success"
+                        invisible="file_data == False"/>
+                    <button name="perform_csv_export" string="🔽 Export CSV" 
+                            type="object" class="btn-primary"
+                            invisible="operation_type != 'export'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="operation_type"/>
+                        <field name="model_name"/>
+                    </group>
+                    <group string="File">
+                        <field name="file_name"/>
+                        <field name="file_data" filename="file_name"/>
+                    </group>
+                    <group string="Statistics">
+                        <field name="records_processed"/>
+                        <field name="records_created"/>
+                        <field name="error_count"/>
+                    </group>
+                    <group string="Result">
+                       <field name="result_message" 
+                        widget="text" 
+                        readonly="1"
+                        invisible="result_message == False"
+                        options="{'resizable': true}"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_unified_file_format" model="ir.actions.act_window">
+        <field name="name">File Format Operations</field>
+        <field name="res_model">unified.file.format</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first file operation!
+            </p>
+            <p>
+                Import data from files (JSON, CSV, Excel) into Odoo models or export Odoo data to various file formats.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root Menu -->
+    <menuitem id="menu_unified_file_format_root"
+              name="File Import/Export Israel"
+              sequence="100"/>
+
+    <!-- Operations Menu -->
+    <menuitem id="menu_unified_file_format_main"
+              name="📁 File Operations"
+              parent="menu_unified_file_format_root"
+              action="action_unified_file_format"
+              sequence="10"/>
+
+    <!-- ADD this new menu for financial transactions -->
+    <menuitem id="menu_financial_transactions"
+              name="💰 Financial Transactions"
+              parent="menu_unified_file_format_root"
+              action="action_financial_transaction"
+              sequence="20"/>
+</odoo>
