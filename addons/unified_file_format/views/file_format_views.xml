@@ -29,30 +29,17 @@
                     <button name="perform_unified_import" string="📁 Import File" 
                         type="object" class="btn-primary"
                         invisible="operation_type != 'import'"/>
-                    <button name="action_analyze_structure" 
-                        string="🔍 Analyze File Structure" 
-                        type="object" 
-                        class="btn-warning"
-                        invisible="file_data == False"/>
-                    <button name="action_analyze_target_model" 
-                        string="🎯 Analyze Target Model" 
-                        type="object" 
-                        class="btn-info"
-                        invisible="model_name == False"/>
-                    <button name="action_debug_individual_transactions" 
-                        string="🔍 Debug Individual Transactions" 
-                        type="object" 
-                        class="btn-info"
-                        invisible="file_data == False"/>
-                    <button name="action_precise_analysis" 
-                        string="🔬 Precise Analysis" 
-                        type="object" 
-                        class="btn-success"
-                        invisible="file_data == False"/>
+                  s
+                 
                     <button name="perform_csv_export" string="🔽 Export CSV" 
                             type="object" class="btn-primary"
                             invisible="operation_type != 'export'"/>
                     <field name="state" widget="statusbar"/>
+
+                    
+                    <button name="get_target_model_fields_list" string="📋 List All Fields" type="object"/>
+                    
+                    <button name="test_real_data_format" string="🧪 Test Real Format" type="object" class="oe_highlight"/>      
                 </header>
                 <sheet>
                     <group>

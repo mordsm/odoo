@@ -3,6 +3,8 @@ import base64
 import csv
 import logging
 from pathlib import Path 
+from datetime import datetime
+import requests
 
 _logger = logging.getLogger(__name__)
 
@@ -79,10 +81,12 @@ class FileFormatModel(models.Model):
                 'result_message': f"Import failed: {str(e)}"
             })
             raise exceptions.UserError(f"Import failed: {str(e)}")
+
     def perform_csv_export(self):
         """Method called by the Export CSV button"""
         # Your CSV export logic here
         pass
+
     def perform_unified_import(self):
         """Import file using unified file format system"""
         if not self.file_data:
@@ -111,6 +115,41 @@ class FileFormatModel(models.Model):
                 'result_message': f"Import failed: {str(e)}"
             })
             raise exceptions.UserError(f"Import failed: {str(e)}")
+
+    def _get_currency_rate(self, from_currency, to_currency='ILS'):
+        """Get currency conversion rate - simplified version"""
+        # In production, you should use a proper currency conversion service
+        # For now, using approximate rates
+        if from_currency == to_currency:
+            return 1.0
+        
+        # Simple static rates - replace with dynamic API call in production
+        rates = {
+            'USD': 3.7,  # 1 USD = 3.7 ILS (approximate)
+            'EUR': 4.0,  # 1 EUR = 4.0 ILS (approximate)
+            'ILS': 1.0
+        }
+        
+        try:
+            # Try to get from Odoo's currency model if available
+            usd_currency = self.env['res.currency'].search([('name', '=', from_currency)], limit=1)
+            ils_currency = self.env['res.currency'].search([('name', '=', to_currency)], limit=1)
+            
+            if usd_currency and ils_currency:
+                return usd_currency._convert(1.0, ils_currency, self.env.company, fields.Date.today())
+        except:
+            pass
+        
+        return rates.get(from_currency, 1.0)
+
+    def _convert_currency(self, amount, from_currency, to_currency='ILS'):
+        """Convert amount from one currency to another"""
+        if from_currency == to_currency:
+            return amount
+        
+        rate = self._get_currency_rate(from_currency, to_currency)
+        return amount * rate
+
     def perform_fixed_width_import(self):
         """Import fixed-width format file with proper Hebrew encoding and debug logging"""
         if not self.file_data:
@@ -241,10 +280,19 @@ class FileFormatModel(models.Model):
                         if record_data.get('record_subtype') == 'individual_transaction':
                             individual_created += 1
                             if individual_created <= 5:
-                                name = clean_data.get('name', 'Unknown')[:20]
-                                ref = clean_data.get('reference', 'No ref')
+                                # FIXED: Add safety checks for logging variables
+                                name = str(clean_data.get('name', 'Unknown'))[:20]
+                                ref = str(clean_data.get('reference', 'No ref'))
                                 amount = clean_data.get('amount', 0.0)
-                                _logger.info(f"Created individual record: {name}, Ref: {ref}, Amount: {amount}")
+                                
+                                # Remove non-printable characters for safe logging
+                                safe_name = ''.join(c if c.isprintable() else '?' for c in name)
+                                safe_ref = ''.join(c if c.isprintable() else '?' for c in ref)
+                                
+                                try:
+                                    _logger.info(f"Created individual record: {safe_name}, Ref: {safe_ref}, Amount: {amount}")
+                                except Exception as log_error:
+                                    _logger.info(f"Created individual record - logging error: {str(log_error)}")
                         else:
                             bank_created += 1
                             
@@ -320,8 +368,6 @@ class FileFormatModel(models.Model):
             _logger.error(f"Critical error in perform_fixed_width_import: {str(e)}", exc_info=True)
             raise exceptions.UserError(error_msg)   
    
-   
-   
     def _parse_header_record(self, line):
         """Parse header record (A record)"""
         return {
@@ -332,7 +378,6 @@ class FileFormatModel(models.Model):
             # Add more fields as needed
         }
 
-    
     def _parse_account_balance(self, line):
         """Parse account balance (בנק הפועלים, קופת מזומן, etc.)"""
         result = {}
@@ -392,111 +437,45 @@ class FileFormatModel(models.Model):
         
         return result
    
-    
-    
     def _extract_dates_and_currency(self, line):
-        """Extract dates and currency from line"""
+        """Extract dates and currency from CORRECT positions based on Hebrew specification"""
         result = {}
         
-        # Find dates (8 consecutive digits that look like dates)
-        import re
-        date_patterns = re.findall(r'\b(20\d{6})\b', line)  # Dates starting with 20 (2010-2099)
+        # FIXED: Extract date from correct position (30-37) - תאריך פעולה
+        if len(line) > 37:
+            date_field = line[30:38].strip()  # Position 30-37 (8 characters)
+            if len(date_field) == 8 and date_field.isdigit():
+                # Validate it looks like a real date
+                try:
+                    year = int(date_field[0:4])
+                    month = int(date_field[4:6])
+                    day = int(date_field[6:8])
+                    if 2000 <= year <= 2030 and 1 <= month <= 12 and 1 <= day <= 31:
+                        result['transaction_date'] = date_field
+                        result['value_date'] = date_field  # Same as transaction date
+                except (ValueError, IndexError):
+                    pass
         
-        if date_patterns:
-            # Use first date as transaction date
-            result['transaction_date'] = date_patterns[0]
-            # If there's a second date, use it as value date
-            if len(date_patterns) > 1:
-                result['value_date'] = date_patterns[1]
-            else:
-                result['value_date'] = date_patterns[0]  # Same as transaction date
-        
-        # Detect currency
-        currency = 'ILS'  # Default to ILS (Shekels) since most transactions are in Shekels
-        
-        # Look for explicit currency indicators
-        if 'USD' in line.upper():
-            currency = 'USD'
-        elif 'ILS' in line.upper() or 'שח' in line or 'שקל' in line:
-            currency = 'ILS'
-        elif 'EUR' in line.upper() or 'אירו' in line:
-            currency = 'EUR'
-        
-        # Alternative method: check amount area for currency codes
-        # Individual transactions: check position 200-220
-        if len(line) > 220:
-            currency_area = line[200:220].upper()
-            if 'USD' in currency_area:
-                currency = 'USD'
-            elif 'EUR' in currency_area:
-                currency = 'EUR'
-            # If no explicit currency found, default to ILS
+        # FIXED: Extract currency from correct position (38-40) - סוג מטבע  
+        currency = 'ILS'  # Default to ILS
+        if len(line) > 40:
+            currency_field = line[38:41].strip()  # Position 38-40 (3 characters)
+            if currency_field in ['USD', 'EUR', 'ILS', 'שח']:
+                if currency_field == 'שח':  # Hebrew for Shekel
+                    currency = 'ILS'
+                else:
+                    currency = currency_field
+            elif currency_field:  # If there's something there but not recognized
+                _logger.info(f"Unknown currency code: '{currency_field}' - defaulting to ILS")
         
         result['currency'] = currency
         return result
 
-    def _parse_individual_transaction(self, line):
-        """Parse individual customer transaction with dates and proper currency"""
-        result = {}
-        
-        def clean_hebrew_text(text):
-            if not text:
-                return ""
-            cleaned = text.replace('\x00', '').strip()
-            return ''.join(char for char in cleaned if ord(char) >= 32)
-        
-        # Extract dates and currency
-        date_currency_info = self._extract_dates_and_currency(line)
-        
-        # EXACT POSITIONS from previous analysis
-        result.update({
-            'transaction_id': line[21:28].strip(),
-            'customer_name': clean_hebrew_text(line[37:67]),
-            'amount2': line[292:307].strip(),
-            'record_subtype': 'individual_transaction',
-            # Add date and currency info
-            'transaction_date': date_currency_info.get('transaction_date', ''),
-            'value_date': date_currency_info.get('value_date', ''),
-            'currency': date_currency_info.get('currency', 'ILS')
-        })
-        
-        # Validate transaction_id
-        if not result['transaction_id'] or len(result['transaction_id']) < 6:
-            import re
-            matches = re.findall(r'\b92\d{5}\b', line)
-            if matches:
-                result['transaction_id'] = matches[0]
-        
-        # Validate customer_name
-        if not result['customer_name'] or len(result['customer_name']) < 3:
-            result['parse_error'] = f"Invalid customer name: '{result['customer_name'][:20]}'"
-            return result
-        
-        # Convert amount
-        amount_str = result['amount2']
-        if amount_str and amount_str.startswith(('+', '-')):
-            try:
-                sign = 1 if amount_str.startswith('+') else -1
-                amount_digits = amount_str[1:].lstrip('0') or '0'
-                if len(amount_digits) >= 2:
-                    amount_value = float(amount_digits[:-2] + '.' + amount_digits[-2:])
-                else:
-                    amount_value = float(amount_digits) / 100
-                result['amount'] = sign * amount_value
-            except ValueError:
-                result['amount'] = 0.0
-        else:
-            result['amount'] = 0.0
-        
-        # Final validation
-        if result['amount'] == 0.0:
-            result['parse_error'] = f"Zero or invalid amount: '{amount_str}'"
-            return result
-        
-        return result
-
+    
+    
+    
     def _parse_bank_operation(self, line):
-        """Parse bank operation with dates and proper currency"""
+        """Parse bank operation with CORRECT field positions"""
         result = {}
         
         def clean_hebrew_text(text):
@@ -505,129 +484,123 @@ class FileFormatModel(models.Model):
             cleaned = text.replace('\x00', '').strip()
             return ''.join(char for char in cleaned if ord(char) >= 32)
         
-        # Extract dates and currency
+        # Extract dates and currency from CORRECT positions
         date_currency_info = self._extract_dates_and_currency(line)
         
-        # Bank operations fields
+        # Use operation description as the main description
+        description = clean_hebrew_text(line[15:30]) if len(line) > 30 else ''
+        operation_details = clean_hebrew_text(line[41:52]) if len(line) > 52 else ''
+        
+        # Combine descriptions
+        if description and operation_details:
+            full_description = f"{description} {operation_details}".strip()
+        elif operation_details:
+            full_description = operation_details
+        else:
+            full_description = description or "Bank Operation"
+        
         result.update({
             'transaction_id': '',  # Bank operations don't have customer transaction IDs
-            'customer_name': clean_hebrew_text(line[100:140]),  # Extended range for descriptions
+            'customer_name': full_description,
             'record_subtype': 'bank_operation',
-            # Add date and currency info
             'transaction_date': date_currency_info.get('transaction_date', ''),
             'value_date': date_currency_info.get('value_date', ''),
             'currency': date_currency_info.get('currency', 'ILS')
         })
         
-        # Extract amount from position 200-220
-        amount_area = line[200:220] if len(line) > 220 else ''
-        result['amount'] = 0.0
-        
-        if amount_area:
+        # Look for amount in additional fields section (after position 70)
+        amount = 0.0
+        if len(line) > 70:
+            remaining_line = line[70:]
             import re
-            # Look for amount patterns: 1USD+0000000007375, 1ILS+0000000007375, etc.
-            amount_match = re.search(r'(USD|ILS|EUR)?\+?(\d+)', amount_area)
-            if amount_match:
-                currency_code = amount_match.group(1)
-                amount_digits = amount_match.group(2).lstrip('0') or '0'
-                
-                # Update currency if found in amount area
-                if currency_code:
-                    result['currency'] = currency_code
-                    
+            amount_matches = re.findall(r'[+-]\d{10,16}', remaining_line)
+            if amount_matches:
+                amount_str = amount_matches[0]
                 try:
+                    sign = 1 if amount_str.startswith('+') else -1
+                    amount_digits = amount_str[1:].lstrip('0') or '0'
                     if len(amount_digits) >= 2:
                         amount_value = float(amount_digits[:-2] + '.' + amount_digits[-2:])
                     else:
                         amount_value = float(amount_digits) / 100
-                    result['amount'] = amount_value
+                    amount = sign * amount_value
                 except ValueError:
-                    result['amount'] = 0.0
+                    amount = 0.0
         
+        result['amount'] = amount
         return result
 
-    def _prepare_odoo_data(self, record_data):
-        """Prepare data with dates and correct currency"""
-        if record_data.get('parse_error'):
-            return None
-        
-        # Get fields from parsed data
-        customer_name = record_data.get('customer_name', '').strip()
-        transaction_id = record_data.get('transaction_id', '').strip()
-        record_subtype = record_data.get('record_subtype', 'unknown')
-        amount = record_data.get('amount', 0.0)
-        currency = record_data.get('currency', 'ILS')  # Default to ILS instead of USD
-        
-        # Create description
-        if record_subtype == 'individual_transaction':
-            if customer_name:
-                description = customer_name
-            elif transaction_id:
-                description = f"Customer Transaction {transaction_id}"
-            else:
-                description = "Individual Transaction"
-        else:
-            description = customer_name if customer_name else "Bank Operation"
-        
-        # Build clean data
-        clean_data = {
-            'name': description[:100],
-            'amount': amount,
-            'currency': currency,  # Use detected currency
-            'transaction_code': record_subtype,
-        }
-        
-        # Add optional fields
-        if transaction_id:
-            clean_data['reference'] = transaction_id
-        
-        if record_data.get('file_id'):
-            clean_data['sequence'] = record_data['file_id']
-        
-        if record_data.get('account_number') and record_data['account_number'] != '0' * len(record_data['account_number']):
-            clean_data['account_number'] = record_data['account_number']
-        
-        # Add raw data (truncated)
-        if record_data.get('raw_line'):
-            clean_data['raw_line'] = record_data['raw_line'][:500]
-        
-        # DATE handling - convert YYYYMMDD to YYYY-MM-DD
-        transaction_date = record_data.get('transaction_date', '')
-        if len(transaction_date) == 8 and transaction_date.isdigit():
-            try:
-                year = transaction_date[0:4]
-                month = transaction_date[4:6]
-                day = transaction_date[6:8]
-                # Validate date components
-                if 1 <= int(month) <= 12 and 1 <= int(day) <= 31 and int(year) >= 2000:
-                    clean_data['transaction_date'] = f"{year}-{month}-{day}"
-            except (ValueError, IndexError):
-                pass  # Skip invalid dates
-        
-        # VALUE DATE handling
-        value_date = record_data.get('value_date', '')
-        if len(value_date) == 8 and value_date.isdigit() and value_date != transaction_date:
-            try:
-                year = value_date[0:4]
-                month = value_date[4:6]
-                day = value_date[6:8]
-                if 1 <= int(month) <= 12 and 1 <= int(day) <= 31 and int(year) >= 2000:
-                    clean_data['value_date'] = f"{year}-{month}-{day}"
-            except (ValueError, IndexError):
-                pass
-        
-        # Validation
-        if not clean_data.get('name') or len(clean_data['name']) < 1:
-            return None
-        
-        # Don't reject zero amounts for bank operations
-        if record_subtype == 'individual_transaction' and amount == 0.0:
-            return None
-        
-        return clean_data
-
-
     
+   
+   
+   
+   
+    def get_target_model_fields_list(self):
+        """Get exact list of fields in target model for proper mapping"""
+        if not self.model_name:
+            raise exceptions.UserError("Please specify target model name first")
+        
+        try:
+            target_model = self.env[self.model_name]
+            model_fields = target_model._fields
+            
+            result = []
+            result.append(f"📋 ALL FIELDS IN MODEL: {self.model_name}")
+            result.append("=" * 50)
+            result.append("")
+            result.append("Copy this list to update your field mapping:")
+            result.append("")
+            
+            # Sort fields alphabetically
+            sorted_fields = sorted(model_fields.items())
+            
+            for field_name, field_obj in sorted_fields:
+                field_type = field_obj.type
+                is_required = getattr(field_obj, 'required', False)
+                required_mark = " (REQUIRED)" if is_required else ""
+                
+                result.append(f"• {field_name} ({field_type}){required_mark}")
+            
+            result.append("")
+            result.append("💡 SUGGESTED FIELD MAPPING:")
+            result.append("Update _prepare_odoo_data to use these exact field names:")
+            result.append("")
+            
+            # Suggest mapping based on common patterns
+            suggestions = {}
+            for field_name, field_obj in model_fields.items():
+                field_type = field_obj.type
+                lower_name = field_name.lower()
+                
+                if field_type in ['date', 'datetime'] and any(word in lower_name for word in ['date', 'time']):
+                    suggestions['DATE'] = field_name
+                elif field_type in ['float', 'monetary'] and any(word in lower_name for word in ['amount', 'total', 'price', 'value']):
+                    suggestions['AMOUNT'] = field_name
+                elif field_type == 'char' and 'name' in lower_name:
+                    suggestions['NAME'] = field_name
+                elif field_type == 'char' and any(word in lower_name for word in ['ref', 'reference', 'number']):
+                    suggestions['REFERENCE'] = field_name
+            
+            for data_type, field_name in suggestions.items():
+                result.append(f"'{field_name}': <-- Use for {data_type}")
+            
+            # Save result
+            self.write({'result_message': '\n'.join(result)})
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Field List Generated',
+                    'message': f'Found {len(model_fields)} fields. Check Result Message for complete list.',
+                    'type': 'info',
+                }
+            }
+            
+        except Exception as e:
+            error_msg = f"Field list generation failed: {str(e)}"
+            self.write({'result_message': error_msg})
+            raise exceptions.UserError(error_msg)
     
     
     def _detect_b_record_type(self, line):
@@ -677,9 +650,542 @@ class FileFormatModel(models.Model):
         # DEFAULT: Bank operation
         return "bank_operation"
 
-    
+    def _extract_dates_and_currency(self, line):
+        """Extract dates and currency from ALL correct positions based on complete specification"""
+        result = {}
+        
+        def decode_hebrew_text(text):
+            """Decode Hebrew text from windows-1255 encoding"""
+            try:
+                if not text or not text.strip():
+                    return ""
+                decoded = text.encode('latin1').decode('windows-1255')
+                return decoded.strip()
+            except:
+                return text.strip()
+        
+        # תאריך ערך (Value Date) - Position 8 chars at specific location
+        # Looking for pattern 20160105 (8 digits)
+        import re
+        date_patterns = re.findall(r'\b(20\d{6})\b', line)
+        if date_patterns:
+            # First date is transaction date, second (if exists) is value date
+            result['transaction_date'] = date_patterns[0]
+            result['value_date'] = date_patterns[1] if len(date_patterns) > 1 else date_patterns[0]
+        else:
+            # No dates found, use today
+            from datetime import date
+            today = date.today().strftime('%Y%m%d')
+            result['transaction_date'] = today
+            result['value_date'] = today
+        
+        # סוג מטבע (Currency Type) - Position showing "1USD"
+        currency = 'ILS'  # Default
+        currency_match = re.search(r'(\d*)(USD|EUR|ILS|שח)', line)
+        if currency_match:
+            currency_code = currency_match.group(2)
+            if currency_code == 'שח':
+                currency = 'ILS'
+            else:
+                currency = currency_code
+        
+        result['currency'] = currency
+        return result
+
+    def _parse_individual_transaction(self, line):
+        """Parse individual transaction with ALL fields from specification"""
+        result = {}
+        
+        def decode_hebrew_text(text):
+            """Decode Hebrew text from windows-1255 encoding"""
+            try:
+                if not text or not text.strip():
+                    return ""
+                decoded = text.encode('latin1').decode('windows-1255')
+                return decoded.strip()
+            except:
+                return text.strip()
+        
+        try:
+            # Based on the Hebrew specification image, extract ALL fields:
+            
+            # Position 0: מחוון סוג רשומה (Record Type Indicator) - 'B'
+            result['record_type'] = line[0:1] if len(line) > 0 else ''
+            
+            # Position 1: סוג פעולה (Operation Type) - '1'  
+            result['operation_type'] = line[1:2] if len(line) > 1 else ''
+            
+            # Position 2-10: מספר פק/חשבון/מוביל (Account/PEK/Transporter Number)
+            result['account_pek_number'] = line[2:12].strip() if len(line) > 11 else ''
+            
+            # Position 11: מספר מזהה ייחודי למידע בקובץ (Unique File ID) - 11 chars
+            result['unique_file_id'] = line[12:23].strip() if len(line) > 22 else ''
+            
+            # Position 9: מספר רישיון (License Number) - 9 chars (514887249)
+            result['license_number'] = line[23:32].strip() if len(line) > 31 else ''
+            
+            # Position 10: Additional account info
+            result['account_extension'] = line[32:42].strip() if len(line) > 41 else ''
+            
+            # Position 5: מספר הזמנה (Order Number)
+            result['order_number'] = line[42:47].strip() if len(line) > 46 else ''
+            
+            # Position 8: מספר פעולה או מזהה יחיד להזמנה (Transaction/Order ID)
+            result['transaction_order_id'] = line[47:55].strip() if len(line) > 54 else ''
+            
+            # Position 15: שדה רק או שקול (Field or Equivalent) - Hebrew description
+            description_field = line[55:70] if len(line) > 69 else ''
+            result['description_field'] = decode_hebrew_text(description_field)
+            
+            # Position 43: סכום התמנעות (Main Amount) - Large number field
+            amount_field = line[70:113] if len(line) > 112 else ''
+            result['main_amount_field'] = amount_field.strip()
+            
+            # תיאור הרכישה (Purchase Description) - "הפקדת ש"ח"
+            purchase_desc_start = 113
+            purchase_desc_end = 130
+            if len(line) > purchase_desc_end:
+                purchase_desc = line[purchase_desc_start:purchase_desc_end]
+                result['purchase_description'] = decode_hebrew_text(purchase_desc)
+            
+            # המלצה/הקטגוריה רקיע (Category/Recommendation)
+            category_start = 130
+            category_end = 145
+            if len(line) > category_end:
+                category = line[category_start:category_end]
+                result['category'] = decode_hebrew_text(category)
+            
+            # Extract dates and currency
+            date_currency_info = self._extract_dates_and_currency_complete(line)
+            result.update(date_currency_info)
+            
+            # Position: מידע הערות עבור מק ספק/מוכר/ספק פעולה (Notes for supplier/vendor)
+            notes_start = 145
+            notes_end = 160
+            if len(line) > notes_end:
+                notes = line[notes_start:notes_end]
+                result['supplier_notes'] = decode_hebrew_text(notes)
+            
+            # Position 4: סוג מטבע ניקוב עמלות (Currency Type with Commission) - "1USD"
+            currency_commission_start = 160
+            currency_commission_end = 164
+            if len(line) > currency_commission_end:
+                curr_comm = line[currency_commission_start:currency_commission_end]
+                result['currency_commission'] = curr_comm.strip()
+            
+            # Position 15: סכום העמלות (Commission Amount)
+            commission_amount_start = 164
+            commission_amount_end = 179
+            if len(line) > commission_amount_end:
+                commission = line[commission_amount_start:commission_amount_end]
+                result['commission_amount'] = commission.strip()
+            
+            # Position 15: עמלות (Additional Commission)
+            additional_commission_start = 179
+            additional_commission_end = 194
+            if len(line) > additional_commission_end:
+                add_comm = line[additional_commission_start:additional_commission_end]
+                result['additional_commission'] = add_comm.strip()
+            
+            # Position 31: שדות שמורים או קופה טיפוסים (Reserved Fields)
+            reserved_start = 194
+            reserved_end = 225
+            if len(line) > reserved_end:
+                reserved = line[reserved_start:reserved_end]
+                result['reserved_fields'] = reserved.strip()
+            
+            # Position 8: תיאור או קוד סוג שביל (Description/Path Type Code)
+            path_code_start = 225
+            path_code_end = 233
+            if len(line) > path_code_end:
+                path_code = line[path_code_start:path_code_end]
+                result['path_type_code'] = path_code.strip()
+            
+            # Extract main amount from the amount fields
+            main_amount = 0.0
+            
+            # Try to extract from main_amount_field (position 43)
+            if result.get('main_amount_field'):
+                amount_str = result['main_amount_field']
+                # Look for amount patterns
+                import re
+                amount_matches = re.findall(r'[+-]?\d{10,20}', amount_str)
+                if amount_matches:
+                    try:
+                        # Take the largest amount found
+                        amounts = []
+                        for match in amount_matches:
+                            clean_match = match.lstrip('+-0') or '0'
+                            if len(clean_match) >= 2:
+                                amount_val = float(clean_match[:-2] + '.' + clean_match[-2:])
+                                if match.startswith('-'):
+                                    amount_val = -amount_val
+                                amounts.append(amount_val)
+                        
+                        if amounts:
+                            main_amount = max(amounts, key=abs)  # Take largest by absolute value
+                    except ValueError:
+                        pass
+            
+            # If no amount found in main field, try other amount fields
+            if main_amount == 0.0:
+                # Look for amount patterns in the entire line
+                import re
+                amount_patterns = re.findall(r'[+-]\d{10,20}', line)
+                if amount_patterns:
+                    try:
+                        # Take first significant amount
+                        for pattern in amount_patterns:
+                            clean_digits = pattern[1:].lstrip('0') or '0'
+                            if len(clean_digits) >= 3:  # At least 1.00
+                                amount_val = float(clean_digits[:-2] + '.' + clean_digits[-2:])
+                                if pattern.startswith('-'):
+                                    amount_val = -amount_val
+                                main_amount = amount_val
+                                break
+                    except ValueError:
+                        pass
+            
+            result['amount'] = main_amount
+            
+            # Create customer name from available description fields
+            name_parts = []
+            if result.get('purchase_description'):
+                name_parts.append(result['purchase_description'])
+            if result.get('category'):
+                name_parts.append(f"[{result['category']}]")
+            if result.get('description_field'):
+                name_parts.append(result['description_field'])
+            
+            result['customer_name'] = " ".join(name_parts) if name_parts else "Transaction"
+            result['record_subtype'] = 'individual_transaction'
+            
+            # Use transaction_order_id as main transaction ID
+            result['transaction_id'] = result.get('transaction_order_id', '')
+            
+            # Validation
+            if not result.get('customer_name') or len(result['customer_name']) < 2:
+                result['parse_error'] = f"Invalid customer name: '{result.get('customer_name', '')[:20]}'"
+                return result
+            
+            if main_amount == 0.0:
+                result['parse_error'] = f"Zero or invalid amount"
+                return result
+                
+        except Exception as e:
+            result['parse_error'] = f"Parse error: {str(e)}"
+        
+        return result
+
+    def _parse_real_format(self, line):
+        """Parse the ACTUAL format from your real data"""
+        result = {}
+        
+        def decode_hebrew_text(text):
+            """Decode Hebrew text from the line"""
+            try:
+                if not text or not text.strip():
+                    return ""
+                # The Hebrew text is already properly encoded in this format
+                cleaned = text.replace('\x00', '').strip()
+                return ''.join(char for char in cleaned if ord(char) >= 32)
+            except:
+                return text.strip()
+        
+        try:
+            # REAL positions based on your actual data:
+            # B10000000000251488724900000000270000100000001...
+            
+            # Position 0: Record Type
+            result['record_type'] = line[0:1] if len(line) > 0 else ''
+            
+            # Position 1: Operation Type  
+            result['operation_type'] = line[1:2] if len(line) > 1 else ''
+            
+            # Position 2-12: Account Number (10000000000)
+            result['account_number'] = line[2:13].strip() if len(line) > 12 else ''
+            
+            # Position 13-24: File ID (251488724900) - 12 digits
+            result['file_id'] = line[13:25].strip() if len(line) > 24 else ''
+            
+            # Position 25-33: License/Additional ID (000000027)
+            result['license_number'] = line[25:34].strip() if len(line) > 33 else ''
+            
+            # Position 34-44: Order Number (00001000000)
+            result['order_number'] = line[34:45].strip() if len(line) > 44 else ''
+            
+            # Position 45-52: Transaction ID (01)
+            result['transaction_id'] = line[45:53].strip() if len(line) > 52 else ''
+            
+            # Look for Hebrew description - find "הפקדת ש'ק"
+            hebrew_start = line.find('הפקדת')
+            if hebrew_start >= 0:
+                # Extract Hebrew description (about 20 chars)
+                hebrew_desc = line[hebrew_start:hebrew_start+20]
+                result['hebrew_description'] = decode_hebrew_text(hebrew_desc)
+                result['customer_name'] = result['hebrew_description']
+            else:
+                # Fallback - look for any Hebrew characters
+                import re
+                hebrew_matches = re.findall(r'[\u0590-\u05FF\u200F\u200E]+(?:\s+[\u0590-\u05FF\u200F\u200E]+)*', line)
+                if hebrew_matches:
+                    result['hebrew_description'] = hebrew_matches[0].strip()
+                    result['customer_name'] = result['hebrew_description']
+                else:
+                    result['customer_name'] = "Transaction"
+            
+            # Extract dates - look for 20160105 pattern
+            import re
+            date_patterns = re.findall(r'(20\d{6})', line)
+            if date_patterns:
+                result['transaction_date'] = date_patterns[0]  # First date
+                result['value_date'] = date_patterns[1] if len(date_patterns) > 1 else date_patterns[0]
+            
+            # Extract currency - look for 1USD pattern
+            currency_match = re.search(r'(\d+)(USD|EUR|ILS)', line)
+            if currency_match:
+                result['currency'] = currency_match.group(2)
+            else:
+                result['currency'] = 'USD'  # Default based on your data
+            
+            # Extract amounts - look for +followed by digits
+            amount_patterns = re.findall(r'\+(\d{11,15})', line)
+            amounts = []
+            
+            for amount_str in amount_patterns:
+                try:
+                    # Convert amount (last 2 digits are cents)
+                    amount_digits = amount_str.lstrip('0') or '0'
+                    if len(amount_digits) >= 2:
+                        amount_value = float(amount_digits[:-2] + '.' + amount_digits[-2:])
+                    else:
+                        amount_value = float(amount_digits) / 100
+                    
+                    # Only consider meaningful amounts (> 0.01)
+                    if amount_value > 0.01:
+                        amounts.append(amount_value)
+                except ValueError:
+                    continue
+            
+            # Use the largest amount found
+            if amounts:
+                result['amount'] = max(amounts)
+            else:
+                result['amount'] = 0.0
+            
+            result['record_subtype'] = 'individual_transaction'
+            
+            # Validation
+            if not result.get('customer_name') or len(result['customer_name']) < 2:
+                result['parse_error'] = f"Invalid customer name: '{result.get('customer_name', '')[:20]}'"
+                return result
+            
+            if result['amount'] == 0.0:
+                result['parse_error'] = f"Zero or invalid amount"
+                return result
+                
+        except Exception as e:
+            result['parse_error'] = f"Parse error: {str(e)}"
+        
+        return result
+
+    def _prepare_odoo_data(self, record_data):
+        """Prepare data for financial.transaction model using EXISTING fields only"""
+        if record_data.get('parse_error'):
+            return None
+        
+        # Get fields from parsed data
+        customer_name = record_data.get('customer_name', '').strip()
+        transaction_id = record_data.get('transaction_id', '').strip()
+        account_number = record_data.get('account_number', '').strip()
+        file_id = record_data.get('file_id', '').strip()
+        license_number = record_data.get('license_number', '').strip()
+        record_subtype = record_data.get('record_subtype', 'unknown')
+        amount = record_data.get('amount', 0.0)
+        original_currency = record_data.get('currency', 'USD')
+        
+        # CURRENCY CONVERSION
+        if original_currency != 'ILS' and amount != 0.0:
+            converted_amount = self._convert_currency(amount, original_currency, 'ILS')
+            _logger.info(f"Currency conversion: {amount} {original_currency} -> {converted_amount} ILS")
+        else:
+            converted_amount = amount
+        
+        # Create description
+        full_description = customer_name if customer_name else f"Transaction {transaction_id}"
+        
+        # Build clean data using ONLY existing model fields from Image 1
+        clean_data = {
+            # REQUIRED FIELD
+            'name': full_description[:100],  # Using 'name' field that exists
+            
+            # AMOUNT FIELDS (use existing fields from Image 1)
+            'amount': abs(converted_amount),  # 'amount (float)' exists
+        }
+        
+        # CREDIT/DEBIT amounts (exist in model)
+        if converted_amount >= 0:
+            clean_data['credit_amount'] = converted_amount  # 'credit_amount (float)' exists
+            clean_data['debit_amount'] = 0.0  # 'debit_amount (float)' exists
+        else:
+            clean_data['credit_amount'] = 0.0
+            clean_data['debit_amount'] = abs(converted_amount)
+        
+        # CURRENCY (exists in model)
+        clean_data['currency'] = 'ILS'  # 'currency (char)' exists
+        
+        # TRANSACTION CODE (exists in model)  
+        clean_data['transaction_code'] = record_subtype  # 'transaction_code (char)' exists
+        
+        # REFERENCE (exists in model)
+        if transaction_id:
+            clean_data['reference'] = transaction_id  # 'reference (char)' exists
+        elif license_number:
+            clean_data['reference'] = license_number
+        
+        # SEQUENCE (exists in model)
+        if file_id:
+            clean_data['sequence'] = file_id  # 'sequence (char)' exists
+        
+        # ACCOUNT NUMBER (exists in model)
+        if account_number and account_number != '0' * len(account_number):
+            clean_data['account_number'] = account_number  # 'account_number (char)' exists
+        
+        # RAW LINE (exists in model)
+        if record_data.get('raw_line'):
+            clean_data['raw_line'] = record_data['raw_line'][:500]  # 'raw_line (text)' exists
+        
+        # BALANCE (exists in model - can be same as amount)
+        clean_data['balance'] = converted_amount  # 'balance (float)' exists
+        
+        # DATE HANDLING using existing fields
+        transaction_date = record_data.get('transaction_date', '')
+        if len(transaction_date) == 8 and transaction_date.isdigit():
+            try:
+                year = transaction_date[0:4]
+                month = transaction_date[4:6]
+                day = transaction_date[6:8]
+                if 1 <= int(month) <= 12 and 1 <= int(day) <= 31 and int(year) >= 2000:
+                    formatted_date = f"{year}-{month}-{day}"
+                    clean_data['transaction_date'] = formatted_date  # 'transaction_date (date)' exists
+                    
+                    # VALUE DATE
+                    value_date = record_data.get('value_date', '')
+                    if value_date and value_date != transaction_date and len(value_date) == 8:
+                        v_year = value_date[0:4]
+                        v_month = value_date[4:6]
+                        v_day = value_date[6:8]
+                        if 1 <= int(v_month) <= 12 and 1 <= int(v_day) <= 31:
+                            clean_data['value_date'] = f"{v_year}-{v_month}-{v_day}"  # 'value_date (date)' exists
+                    else:
+                        clean_data['value_date'] = formatted_date
+                else:
+                    raise ValueError("Invalid date")
+            except (ValueError, IndexError):
+                # Use today if date parsing fails
+                from datetime import date
+                today = date.today().strftime('%Y-%m-%d')
+                clean_data['transaction_date'] = today
+                clean_data['value_date'] = today
+        else:
+            # No date found, use today
+            from datetime import date
+            today = date.today().strftime('%Y-%m-%d')
+            clean_data['transaction_date'] = today
+            clean_data['value_date'] = today
+        
+        # Add original currency info to name if converted
+        if original_currency != 'ILS':
+            clean_data['name'] = f"{full_description} (was {amount} {original_currency})"[:100]
+        
+        # Validation
+        if not clean_data.get('name') or len(clean_data['name']) < 1:
+            return None
+        
+        if record_subtype == 'individual_transaction' and converted_amount == 0.0:
+            return None
+        
+        return clean_data
+
+    def test_real_data_format(self):
+        """Test with your actual real data"""
+        # Your actual data
+        real_sample = "B10000000000251488724900000000270000100000001               0000000000000000000000000000000000000002555000הפקדת ש'ק                                         201601052016010510001                         1USD+00000000073750+00000000000000+0000000000000000000000000000001000000120160110"
+        
+        result = []
+        result.append("🧪 REAL DATA FORMAT TEST")
+        result.append("=" * 40)
+        result.append(f"Sample length: {len(real_sample)} characters")
+        result.append("")
+        
+        # Parse the real data
+        parsed = self._parse_real_format(real_sample)
+        
+        result.append("🔍 EXTRACTED FIELDS:")
+        key_fields = [
+            'record_type', 'operation_type', 'account_number', 'file_id', 
+            'license_number', 'order_number', 'transaction_id', 
+            'customer_name', 'hebrew_description', 'transaction_date', 
+            'value_date', 'currency', 'amount'
+        ]
+        
+        for field in key_fields:
+            value = parsed.get(field, 'N/A')
+            result.append(f"  {field}: {value}")
+        
+        result.append("")
+        result.append("🎯 PREPARED FOR ODOO:")
+        
+        # Test data preparation
+        clean_data = self._prepare_odoo_data_real(parsed)
+        if clean_data:
+            for key, value in clean_data.items():
+                result.append(f"  {key}: {value}")
+            
+            result.append("")
+            result.append("✅ SUCCESS - Ready to create financial.transaction record!")
+        else:
+            result.append("❌ PREPARATION FAILED")
+        
+        # Check field compatibility with financial.transaction model
+        result.append("")
+        result.append("🔍 MODEL COMPATIBILITY CHECK:")
+        
+        # These are the exact fields from Image 1
+        model_fields = [
+            'account_number', 'amount', 'balance', 'create_date', 'create_uid',
+            'credit_amount', 'currency', 'debit_amount', 'display_name', 'id',
+            'name', 'raw_line', 'reference', 'sequence', 'transaction_code',
+            'transaction_date', 'value_date', 'write_date', 'write_uid'
+        ]
+        
+        if clean_data:
+            compatible_count = 0
+            for field_name in clean_data.keys():
+                if field_name in model_fields:
+                    compatible_count += 1
+                    result.append(f"  ✅ {field_name}: EXISTS in model")
+                else:
+                    result.append(f"  ❌ {field_name}: MISSING from model")
+            
+            result.append("")
+            result.append(f"COMPATIBILITY SCORE: {compatible_count}/{len(clean_data)} fields compatible")
+        
+        # Save result
+        self.write({'result_message': '\n'.join(result)})
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Real Data Test Complete',
+                'message': f'Parsed real format successfully! Found Hebrew: {parsed.get("hebrew_description", "N/A")[:20]}',
+                'type': 'success',
+            }
+        }
+
     def _parse_detail_record(self, line):
-        """Parse detail record with dates and currency detection"""
+        """Final parse method using real format"""
         result = {
             'record_type': line[0:1] if len(line) > 0 else '',
             'raw_line': line,
@@ -687,30 +1193,17 @@ class FileFormatModel(models.Model):
         }
         
         try:
-            if not line.startswith('B') or len(line) < 200:
+            if not line.startswith('B') or len(line) < 100:
                 result['parse_error'] = f'Invalid B record'
                 return result
             
-            # Extract basic fields for all records
-            result['file_id'] = line[20:40].strip()
-            result['account_number'] = line[60:80].strip()
+            # Use real format parsing
+            real_result = self._parse_real_format(line)
+            result.update(real_result)
             
-            # DETECT RECORD TYPE
-            record_type = self._detect_b_record_type(line)
-            
-            if record_type == "individual_transaction":
-                individual_result = self._parse_individual_transaction(line)
-                if individual_result.get('parse_error'):
-                    result.update(self._parse_bank_operation(line))
-                else:
-                    result.update(individual_result)
-                    
-            else:  # bank_operation
-                result.update(self._parse_bank_operation(line))
-            
-            # Ensure currency is set (fallback to ILS)
+            # Ensure currency is set
             if not result.get('currency'):
-                result['currency'] = 'ILS'
+                result['currency'] = 'USD'
             
             # Final validation
             customer_name = result.get('customer_name', '').strip()
@@ -722,10 +1215,10 @@ class FileFormatModel(models.Model):
             result['parse_error'] = f"Parse error: {str(e)}"
         
         return result
-
-
+   
     
-    
+   
+    # Keep all your existing analysis methods
     def action_csv_import(self):
         """Simple CSV import"""
         if not self.file_data:
@@ -772,151 +1265,62 @@ class FileFormatModel(models.Model):
             raise exceptions.UserError(f"Import failed: {str(e)}")
 
     def action_csv_export(self):
-            """Simple CSV export"""
-            try:
-                # Get source model
-                source_model = self.env[self.model_name]
-                records = source_model.search([])
-                
-                if not records:
-                    raise exceptions.UserError("No records found")
-                
-                # Get basic fields
-                field_list = ['id', 'name']
-                if 'email' in source_model._fields:
-                    field_list.append('email')
-                if 'phone' in source_model._fields:
-                    field_list.append('phone')
-                
-                # Read data
-                data = records.read(field_list)
-                
-                # Create CSV
-                import io
-                output = io.StringIO()
-                writer = csv.DictWriter(output, fieldnames=field_list)
-                writer.writeheader()
-                
-                for record in data:
-                    clean_record = {}
-                    for key, value in record.items():
-                        if isinstance(value, (list, tuple)) and len(value) == 2:
-                            clean_record[key] = value[1]  # Many2one field
-                        else:
-                            clean_record[key] = str(value) if value else ''
-                    writer.writerow(clean_record)
-                
-                csv_content = output.getvalue()
-                output.close()
-                
-                # Save result
-                self.write({
-                    'state': 'done',
-                    'file_data': base64.b64encode(csv_content.encode('utf-8')),
-                    'file_name': f"{self.model_name}_export.csv",
-                    'records_processed': len(data),
-                    'result_message': f"Export completed: {len(data)} records"
-                })
-                
-            except Exception as e:
-                self.write({
-                    'state': 'error',
-                    'result_message': f"Export failed: {str(e)}"
-                })
-                raise exceptions.UserError(f"Export failed: {str(e)}")
-    def analyze_file_structure(self):
-            """Analyze the actual file structure and suggest correct field mapping"""
-            if not self.file_data:
-                raise exceptions.UserError("Please upload a file first")
+        """Simple CSV export"""
+        try:
+            # Get source model
+            source_model = self.env[self.model_name]
+            records = source_model.search([])
             
-            try:
-                # Decode file content
-                file_content = None
-                encodings_to_try = ['windows-1255', 'cp1255', 'iso-8859-8', 'utf-8']
-                
-                for encoding in encodings_to_try:
-                    try:
-                        file_content = base64.b64decode(self.file_data).decode(encoding)
-                        break
-                    except UnicodeDecodeError:
-                        continue
-                
-                if file_content is None:
-                    file_content = base64.b64decode(self.file_data).decode('utf-8', errors='ignore')
-                
-                lines = file_content.splitlines()
-                
-                # Find B records
-                b_records = [line for line in lines if line.startswith('B')][:5]  # Analyze first 5 B records
-                
-                if not b_records:
-                    return "No B records found in file"
-                
-                analysis_result = []
-                analysis_result.append("=== FILE STRUCTURE ANALYSIS ===\n")
-                analysis_result.append(f"Total lines: {len(lines)}")
-                analysis_result.append(f"B records found: {len([l for l in lines if l.startswith('B')])}")
-                analysis_result.append(f"Analyzing first {len(b_records)} B records...\n")
-                
-                # Analyze each B record
-                for i, line in enumerate(b_records):
-                    analysis_result.append(f"--- B Record #{i+1} (Length: {len(line)}) ---")
-                    
-                    # Break line into chunks for analysis
-                    chunks = []
-                    pos = 0
-                    chunk_size = 20
-                    
-                    while pos < len(line):
-                        chunk = line[pos:pos+chunk_size]
-                        chunks.append((pos, chunk))
-                        pos += chunk_size
-                    
-                    # Analyze each chunk
-                    for start_pos, chunk in chunks:
-                        end_pos = start_pos + len(chunk)
-                        
-                        # Identify chunk type
-                        chunk_type = self._identify_chunk_type(chunk)
-                        clean_chunk = chunk.replace('\x00', '').strip()
-                        
-                        analysis_result.append(f"  Pos {start_pos:3}-{end_pos:3}: '{clean_chunk}' ({chunk_type})")
-                    
-                    analysis_result.append("")  # Empty line between records
-                
-                # Auto-detect field positions
-                analysis_result.append("=== SUGGESTED FIELD MAPPING ===")
-                suggested_mapping = self._suggest_field_mapping(b_records[0])
-                
-                for field_name, info in suggested_mapping.items():
-                    analysis_result.append(f"{field_name}: Position {info['start']}-{info['end']} = '{info['sample']}'")
-                
-                # Generate corrected _parse_detail_record function
-                analysis_result.append("\n=== SUGGESTED CODE FIX ===")
-                analysis_result.append("Replace your _parse_detail_record with:")
-                analysis_result.append(self._generate_corrected_parser(suggested_mapping))
-                
-                # Update result message
-                full_analysis = "\n".join(analysis_result)
-                self.write({
-                    'result_message': full_analysis
-                })
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'File Analysis Complete',
-                        'message': 'Check Result Message for detailed analysis and suggested fixes',
-                        'type': 'info',
-                    }
-                }
-                
-            except Exception as e:
-                error_msg = f"Analysis failed: {str(e)}"
-                self.write({'result_message': error_msg})
-                raise exceptions.UserError(error_msg)
+            if not records:
+                raise exceptions.UserError("No records found")
+            
+            # Get basic fields
+            field_list = ['id', 'name']
+            if 'email' in source_model._fields:
+                field_list.append('email')
+            if 'phone' in source_model._fields:
+                field_list.append('phone')
+            
+            # Read data
+            data = records.read(field_list)
+            
+            # Create CSV
+            import io
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=field_list)
+            writer.writeheader()
+            
+            for record in data:
+                clean_record = {}
+                for key, value in record.items():
+                    if isinstance(value, (list, tuple)) and len(value) == 2:
+                        clean_record[key] = value[1]  # Many2one field
+                    else:
+                        clean_record[key] = str(value) if value else ''
+                writer.writerow(clean_record)
+            
+            csv_content = output.getvalue()
+            output.close()
+            
+            # Save result
+            self.write({
+                'state': 'done',
+                'file_data': base64.b64encode(csv_content.encode('utf-8')),
+                'file_name': f"{self.model_name}_export.csv",
+                'records_processed': len(data),
+                'result_message': f"Export completed: {len(data)} records"
+            })
+            
+        except Exception as e:
+            self.write({
+                'state': 'error',
+                'result_message': f"Export failed: {str(e)}"
+            })
+            raise exceptions.UserError(f"Export failed: {str(e)}")
 
+   
+   
+   
     def _identify_chunk_type(self, chunk):
         """Identify what type of data is in a chunk"""
         clean = chunk.replace('\x00', '').strip()
@@ -1066,367 +1470,8 @@ class FileFormatModel(models.Model):
         
         return "\n".join(code_lines)
 
-    # Add this method to your class to trigger the analysis
-    def action_analyze_structure(self):
-            """Button action to analyze file structure"""
-            return self.analyze_file_structure()
-    def action_analyze_target_model(self):
-        """Analyze target model fields and suggest field mapping"""
-        if not self.model_name:
-            raise exceptions.UserError("Please specify target model name first")
-        
-        try:
-            # Get target model
-            target_model = self.env[self.model_name]
-            
-            # Get all fields from target model
-            model_fields = target_model._fields
-            
-            result = []
-            result.append(f"=== TARGET MODEL ANALYSIS: {self.model_name} ===\n")
-            result.append(f"Available fields ({len(model_fields)}):\n")
-            
-            # Categorize fields
-            text_fields = []
-            date_fields = []
-            number_fields = []
-            other_fields = []
-            
-            for field_name, field_obj in model_fields.items():
-                field_type = field_obj.type
-                field_info = f"• {field_name} ({field_type})"
-                
-                if hasattr(field_obj, 'string') and field_obj.string:
-                    field_info += f" - '{field_obj.string}'"
-                
-                if field_type in ['char', 'text']:
-                    text_fields.append(field_info)
-                elif field_type in ['date', 'datetime']:
-                    date_fields.append(field_info)
-                elif field_type in ['integer', 'float', 'monetary']:
-                    number_fields.append(field_info)
-                else:
-                    other_fields.append(field_info)
-            
-            # Display categorized fields
-            if text_fields:
-                result.append("TEXT FIELDS:")
-                result.extend(text_fields[:10])  # Show first 10
-                if len(text_fields) > 10:
-                    result.append(f"... and {len(text_fields) - 10} more text fields")
-                result.append("")
-            
-            if date_fields:
-                result.append("DATE FIELDS:")
-                result.extend(date_fields)
-                result.append("")
-            
-            if number_fields:
-                result.append("NUMBER FIELDS:")
-                result.extend(number_fields)
-                result.append("")
-            
-            # Suggest field mapping
-            result.append("=== SUGGESTED FIELD MAPPING ===")
-            result.append("Based on common field names, try mapping:")
-            
-            suggested_mapping = {
-                'name': ['name', 'description', 'label', 'memo'],
-                'amount': ['amount', 'total', 'price', 'value', 'sum'],
-                'date': ['date', 'transaction_date', 'date_created', 'create_date'],
-                'reference': ['reference', 'ref', 'number', 'invoice_number'],
-                'partner': ['partner_id', 'customer_id', 'vendor_id']
-            }
-            
-            for data_type, possible_fields in suggested_mapping.items():
-                found_fields = [f for f in possible_fields if f in model_fields]
-                if found_fields:
-                    result.append(f"• {data_type.upper()}: Use field '{found_fields[0]}'")
-                else:
-                    result.append(f"• {data_type.upper()}: No suitable field found")
-            
-            result.append(f"\n=== RECOMMENDED _prepare_odoo_data FIX ===")
-            result.append("Replace the clean_data.update() section with:")
-            result.append("clean_data = {")
-            
-            # Generate field mapping based on available fields
-            if 'name' in model_fields:
-                result.append("    'name': customer_name or f'Transaction {transaction_id}',")
-            if 'amount' in model_fields:
-                result.append("    'amount': record_data.get('amount', 0.0),")
-            elif 'total' in model_fields:
-                result.append("    'total': record_data.get('amount', 0.0),")
-            elif 'price' in model_fields:
-                result.append("    'price': record_data.get('amount', 0.0),")
-            
-            if 'date' in model_fields:
-                result.append("    'date': clean_data.get('transaction_date'),")
-            elif 'transaction_date' in model_fields:
-                result.append("    'transaction_date': clean_data.get('transaction_date'),")
-            
-            if 'reference' in model_fields:
-                result.append("    'reference': record_data.get('transaction_id', ''),")
-            elif 'ref' in model_fields:
-                result.append("    'ref': record_data.get('transaction_id', ''),")
-            
-            result.append("}")
-            result.append("\nRemove fields that don't exist in the target model.")
-            
-            # Update result message
-            full_analysis = "\n".join(result)
-            self.write({'result_message': full_analysis})
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Target Model Analysis Complete',
-                    'message': f'Found {len(model_fields)} fields in {self.model_name}',
-                    'type': 'info',
-                }
-            }
-            
-        except KeyError:
-            error_msg = f"Model '{self.model_name}' does not exist"
-            self.write({'result_message': error_msg})
-            raise exceptions.UserError(error_msg)
-        except Exception as e:
-            error_msg = f"Model analysis failed: {str(e)}"
-            self.write({'result_message': error_msg})
-            raise exceptions.UserError(error_msg)
-        
+  
     
-    def action_precise_analysis(self):
-        """Precise analysis that shows results in popup"""
-        if not self.file_data:
-            raise exceptions.UserError("Please upload a file first")
-        
-        try:
-            # Decode file
-            file_content = base64.b64decode(self.file_data).decode('windows-1255')
-            lines = file_content.splitlines()
-            
-            # Find specific transaction lines
-            target_lines = []
-            for line in lines:
-                if '9200036' in line or '9200035' in line or '9200037' in line:
-                    target_lines.append(line)
-                if len(target_lines) >= 3:
-                    break
-            
-            if not target_lines:
-                raise exceptions.UserError("Could not find target transaction lines")
-            
-            # Analyze first line in detail
-            sample_line = target_lines[0]
-            
-            # Find key positions
-            pos_id = -1
-            pos_name = -1
-            
-            # Find transaction ID
-            for tid in ['9200036', '9200035', '9200037']:
-                pos = sample_line.find(tid)
-                if pos >= 0:
-                    pos_id = pos
-                    break
-            
-            # Find merchant name
-            for name in ['perfectomobile', 'nielsen', 'perfectom', 'niel']:
-                pos = sample_line.find(name)
-                if pos >= 0:
-                    pos_name = pos
-                    break
-            
-            # Find amounts
-            import re
-            amounts = []
-            amount_matches = re.finditer(r'[+-]\d{14,15}', sample_line)
-            for match in amount_matches:
-                amounts.append((match.start(), match.end(), match.group()))
-            
-            # Create comprehensive result message
-            result = []
-            result.append("=== PRECISE FIELD POSITIONS ===")
-            result.append(f"Sample line length: {len(sample_line)}")
-            result.append("")
-            
-            if pos_id >= 0:
-                result.append(f"Transaction ID found at position: {pos_id}")
-                result.append(f"Transaction ID value: '{sample_line[pos_id:pos_id+7]}'")
-            
-            if pos_name >= 0:
-                result.append(f"Merchant name starts at position: {pos_name}")
-                result.append(f"Merchant name value: '{sample_line[pos_name:pos_name+20]}'")
-            
-            result.append("")
-            result.append("Amount fields found:")
-            for i, (start, end, amount) in enumerate(amounts):
-                # Convert amount for display
-                try:
-                    sign = 1 if amount.startswith('+') else -1
-                    amount_digits = amount[1:].lstrip('0') or '0'
-                    if len(amount_digits) >= 2:
-                        amount_value = float(amount_digits[:-2] + '.' + amount_digits[-2:])
-                    else:
-                        amount_value = float(amount_digits) / 100
-                    final_amount = sign * amount_value
-                    result.append(f"  Amount{i+1} at pos {start}-{end}: '{amount}' = {final_amount}")
-                except:
-                    result.append(f"  Amount{i+1} at pos {start}-{end}: '{amount}' = conversion failed")
-            
-            result.append("")
-            result.append("=== CORRECTED PARSER SUGGESTION ===")
-            if pos_id >= 0 and pos_name >= 0:
-                result.append("Replace these lines in _parse_detail_record:")
-                result.append(f"'transaction_id': line[{pos_id}:{pos_id+7}].strip(),")
-                result.append(f"'customer_name': line[{pos_name}:{pos_name+30}].strip(),")
-            
-            if amounts:
-                result.append("Amount fields:")
-                for i, (start, end, _) in enumerate(amounts):
-                    result.append(f"'amount{i+1}': line[{start}:{end}].strip(),")
-            
-            # Save to result_message AND return popup
-            full_result = "\n".join(result)
-            self.write({'result_message': full_result})
-            
-            # Return popup message
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Analysis Complete!',
-                    'message': f'Found Transaction ID at pos {pos_id}, Name at pos {pos_name}. Check Result Message below for full details.',
-                    'type': 'success',
-                    'sticky': True,  # Keep popup visible longer
-                }
-            }
-            
-        except Exception as e:
-            error_msg = f"Analysis failed: {str(e)}"
-            self.write({'result_message': error_msg})
-            raise exceptions.UserError(error_msg)
-    def action_debug_individual_transactions(self):
-        """Debug individual transactions to find correct field positions"""
-        if not self.file_data:
-            raise exceptions.UserError("Please upload a file first")
-        
-        try:
-            # Decode file
-            file_content = base64.b64decode(self.file_data).decode('windows-1255')
-            lines = file_content.splitlines()
-            
-            # Find specific individual transaction lines
-            target_lines = []
-            for line in lines:
-                if 'nielsen' in line or 'perfectomobile' in line:
-                    if 'nielsen' in line:
-                        target_lines.append(('nielsen', line))
-                    if 'perfectomobile' in line:
-                        target_lines.append(('perfectomobile', line))
-                        
-                if len(target_lines) >= 2:
-                    break
-            
-            if not target_lines:
-                raise exceptions.UserError("Could not find nielsen or perfectomobile lines")
-            
-            result = []
-            result.append("=== INDIVIDUAL TRANSACTION DEBUG ===\n")
-            
-            for name, line in target_lines:
-                result.append(f"--- {name.upper()} ANALYSIS ---")
-                result.append(f"Line length: {len(line)}")
-                result.append("")
-                
-                # Find the exact position of the name
-                name_pos = line.find(name)
-                result.append(f"'{name}' found at position: {name_pos}")
-                
-                # Show context around the name
-                start_context = max(0, name_pos - 30)
-                end_context = min(len(line), name_pos + len(name) + 30)
-                result.append(f"Context: '{line[start_context:end_context]}'")
-                result.append("")
-                
-                # Look for 7-digit transaction IDs (like 9200035, 9200036)
-                import re
-                transaction_ids = re.finditer(r'\b9\d{6}\b', line)
-                result.append("Transaction ID patterns found:")
-                for match in transaction_ids:
-                    result.append(f"  Position {match.start()}-{match.end()}: '{match.group()}'")
-                
-                # Look for any 6-7 digit numbers
-                general_ids = re.finditer(r'\b\d{6,7}\b', line)
-                result.append("6-7 digit numbers found:")
-                for match in general_ids:
-                    result.append(f"  Position {match.start()}-{match.end()}: '{match.group()}'")
-                
-                result.append("")
-                
-                # Show amounts found
-                amounts = re.finditer(r'[+-]\d{12,16}', line)
-                result.append("Amount patterns found:")
-                for match in amounts:
-                    amount_str = match.group()
-                    try:
-                        amount_digits = amount_str[1:].lstrip('0') or '0'
-                        if len(amount_digits) >= 2:
-                            amount_value = float(amount_digits[:-2] + '.' + amount_digits[-2:])
-                        else:
-                            amount_value = float(amount_digits) / 100
-                        result.append(f"  Position {match.start()}-{match.end()}: '{amount_str}' = {amount_value}")
-                    except:
-                        result.append(f"  Position {match.start()}-{match.end()}: '{amount_str}' = conversion failed")
-                
-                result.append("")
-                
-                # Character-by-character analysis of first 100 positions
-                result.append("Character analysis (positions 0-99):")
-                for pos in range(0, min(100, len(line)), 20):
-                    chunk = line[pos:pos+20]
-                    result.append(f"  {pos:2d}-{pos+19:2d}: '{chunk}'")
-                
-                result.append("")
-                result.append("=" * 50)
-                result.append("")
-            
-            # Current parser analysis
-            result.append("=== CURRENT PARSER RESULTS ===")
-            for name, line in target_lines:
-                result.append(f"--- {name} ---")
-                
-                # Apply current individual transaction parser
-                parsed = self._parse_individual_transaction(line)
-                
-                result.append(f"transaction_id: '{parsed.get('transaction_id', 'EMPTY')}'")
-                result.append(f"customer_name: '{parsed.get('customer_name', 'EMPTY')}'")
-                result.append(f"amount: {parsed.get('amount', 0.0)}")
-                result.append("")
-            
-            # Suggestions
-            result.append("=== SUGGESTED FIXES ===")
-            result.append("Based on the analysis above:")
-            result.append("1. Check where transaction IDs actually appear")
-            result.append("2. Verify customer name extraction is correct")
-            result.append("3. Confirm amount extraction works")
-            result.append("4. Update field positions in _parse_individual_transaction")
-            
-            # Save result
-            self.write({'result_message': '\n'.join(result)})
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Individual Transaction Debug Complete',
-                    'message': 'Check Result Message for detailed analysis of nielsen/perfectomobile records',
-                    'type': 'info',
-                }
-            }
-            
-        except Exception as e:
-            error_msg = f"Debug failed: {str(e)}"
-            self.write({'result_message': error_msg})
-            raise exceptions.UserError(error_msg)
+    
+    
+   
